@@ -16,8 +16,8 @@ public class Main {
         sysYLexer.removeErrorListeners();
         sysYLexer.addErrorListener(new ErrorListener());
 
-//        CommonTokenStream tokens = new CommonTokenStream(sysYLexer);
-//        SysYParser sysYParser = new SysYParser(tokens);
+        CommonTokenStream tokens = new CommonTokenStream(sysYLexer);
+        SysYParser sysYParser = new SysYParser(tokens);
 
 
         List<? extends Token> myTokens = sysYLexer.getAllTokens();
