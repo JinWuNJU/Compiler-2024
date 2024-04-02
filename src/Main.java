@@ -1,4 +1,5 @@
 import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,6 +25,14 @@ public class Main {
 
         Vocabulary vocabulary = sysYLexer.getVocabulary();
 
+
+
+
+        ParseTree tree = sysYParser.program();
+        SysYParserBaseVisitor visitor = new SysYParserBaseVisitor();
+        visitor.visit(tree);
+
+
         String s = "Black";
         int sgr = SGR_Name.Black.SGR;
 
@@ -31,24 +40,35 @@ public class Main {
         if (ErrorListener.isError == true) {
             ErrorListener.printLexerErrorInformation();
         } else {
-            for (Token t : myTokens) {
-                String text = t.getText();
-                int line = t.getLine();
-                int type = t.getType();
-                String sym = vocabulary.getSymbolicName(type);
-                if (sym.equals("INTEGER_CONST")) {
-                    if (text.charAt(0) == '0' && text.length() >= 2) {
-                        if (text.startsWith("0x") || text.startsWith("0X")) {
-                            text = String.valueOf(Long.parseLong(text.substring(2), 16));
-                        } else {
-                            text = String.valueOf(Long.parseLong(text.substring(1), 8));
-                        }
-                    }
-                }
-                System.out.println(sym + " " + text + " at Line " + line + ".");
-            }
+
         }
     }
 
 
 }
+
+
+
+
+
+
+
+
+
+
+//            for (Token t : myTokens) {
+//                String text = t.getText();
+//                int line = t.getLine();
+//                int type = t.getType();
+//                String sym = vocabulary.getSymbolicName(type);
+//                if (sym.equals("INTEGER_CONST")) {
+//                    if (text.charAt(0) == '0' && text.length() >= 2) {
+//                        if (text.startsWith("0x") || text.startsWith("0X")) {
+//                            text = String.valueOf(Long.parseLong(text.substring(2), 16));
+//                        } else {
+//                            text = String.valueOf(Long.parseLong(text.substring(1), 8));
+//                        }
+//                    }
+//                }
+//                System.out.println(sym + " " + text + " at Line " + line + ".");
+//            }
