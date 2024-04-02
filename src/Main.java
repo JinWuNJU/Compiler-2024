@@ -33,7 +33,7 @@ public class Main
                 int line = t.getLine();
                 int type = t.getType();
                 String sym = vocabulary.getSymbolicName(type);
-                if(sym.equals("INTEGR_CONST")){
+                if(sym.equals("INTEGER_CONST")){
                     if(text.charAt(0) == '0' && text.length() >= 2){
                         if(text.startsWith("0x") || text.startsWith("0X")){
                             text = String.valueOf(Long.parseLong(text.substring(2),16));
@@ -46,6 +46,9 @@ public class Main
                 System.err.println(sym + " " + text + " at Line " +line +".");
             }
         }
+        public void printSysYTokenInformation(Token t){
+
+        };
 
 
 //[token类型] [token文本] at Line [此token首个字符所在行的行号].
