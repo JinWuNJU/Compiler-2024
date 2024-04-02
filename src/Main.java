@@ -1,7 +1,4 @@
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.Token;
-import org.antlr.v4.runtime.Vocabulary;
+import org.antlr.v4.runtime.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,6 +15,10 @@ public class Main {
 
         sysYLexer.removeErrorListeners();
         sysYLexer.addErrorListener(new ErrorListener());
+
+        CommonTokenStream tokens = new CommonTokenStream(sysYLexer);
+        SysYParser sysYParser = new SysYParser(tokens);
+
 
         List<? extends Token> myTokens = sysYLexer.getAllTokens();
 
