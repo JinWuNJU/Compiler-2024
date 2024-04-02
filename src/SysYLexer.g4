@@ -38,7 +38,7 @@ SEMICOLON : ';';
 
 IDENT: (LETTER | '_') (LETTER | DIGIT | '_')* ;
 
-INTEGR_CONST: OCTAL | HEXADECIMAL | DECIMAL;
+INTEGER_CONST: OCTAL | HEXADECIMAL | DECIMAL;
 fragment DECIMAL: '0' | [1-9] [0-9]*;
 fragment OCTAL: '0' [0-7]+;
 fragment HEXADECIMAL: ('0x' | '0X') (DIGIT | [a-fA-F])+ ;
