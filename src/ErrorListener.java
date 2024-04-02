@@ -13,12 +13,12 @@ public class ErrorListener extends BaseErrorListener {
 
     public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
         isError = true;
-        list.add("Error type A at Line " + line + ": baga");
+        list.add("Error type B at Line " + line + ": baga");
     }
 
     public static void printLexerErrorInformation(){
         for(String s : list){
-            System.err.println(s);
+            System.out.println(s);
         }
 
     }
