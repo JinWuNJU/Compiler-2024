@@ -1,4 +1,4 @@
-grammar SysYParser;
+parser grammar SysYParser;
 
 
 
