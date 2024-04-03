@@ -44,7 +44,7 @@ funcDef : functype IDENT '(' (funcFParams)? ')' block;
 
 functype : 'void' | 'int';
 
-funcFParams : funcFParam (',' funcFParam);
+funcFParams : funcFParam (',' funcFParam)*;
 
 funcFParam : btype IDENT ('[' ']' ('[' exp ']')*)?;
 

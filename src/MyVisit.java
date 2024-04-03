@@ -6,9 +6,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class MyVisit extends SysYParserBaseVisitor {
-    public static Set<String> BrightCyan = new HashSet<>();
+    private Set<String> BrightCyan = new HashSet<>();
 
-    public static Set<String> BrightRed = new HashSet<>();
+    private Set<String> BrightRed = new HashSet<>();
 
     public void init() {
         BrightCyan.add("const");
@@ -38,7 +38,6 @@ public class MyVisit extends SysYParserBaseVisitor {
         BrightRed.add("||");
         BrightRed.add(",");
         BrightRed.add(";");
-        // +、-、*、/、%、=、==、!=、<、>、<=、>=、!、&&、||、,、;
     }
 
     private String color(SGR_Name sgr_name, String s, boolean isUnderlined) {
@@ -49,7 +48,7 @@ public class MyVisit extends SysYParserBaseVisitor {
     }
 
 
-    public String help(TerminalNode node) {
+    private String help(TerminalNode node) {
         ParserRuleContext context = (ParserRuleContext) node.getParent();
         while (context != null) {
             if (context instanceof SysYParser.StmtContext) {
@@ -62,7 +61,7 @@ public class MyVisit extends SysYParserBaseVisitor {
         return "";
     }
 
-    public Boolean isUnderlined(String context) {
+    private Boolean isUnderlined(String context) {
         return "decl".equals(context);
     }
 
