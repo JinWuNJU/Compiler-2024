@@ -1,10 +1,12 @@
-import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.io.IOException;
-import java.util.List;
 
 public class Main {
+
     public static void main(String[] args) throws IOException {
         if (args.length < 1) {
             System.err.println("input path is required");
@@ -17,43 +19,31 @@ public class Main {
         sysYLexer.removeErrorListeners();
         sysYLexer.addErrorListener(new ErrorListener());
 
+
         CommonTokenStream tokens = new CommonTokenStream(sysYLexer);
         SysYParser sysYParser = new SysYParser(tokens);
 
-
-        List<? extends Token> myTokens = sysYLexer.getAllTokens();
-
-        Vocabulary vocabulary = sysYLexer.getVocabulary();
-
-
-
+        sysYParser.removeErrorListeners();
+        sysYParser.addErrorListener(new ErrorListener());
 
         ParseTree tree = sysYParser.program();
-        SysYParserBaseVisitor visitor = new SysYParserBaseVisitor();
-        visitor.visit(tree);
-
-
-        String s = "Black";
-        int sgr = SGR_Name.Black.SGR;
-
 
         if (ErrorListener.isError == true) {
             ErrorListener.printLexerErrorInformation();
-        } else {
-
+            return;
         }
+        MyVisit visitor = new MyVisit();
+        visitor.init();
+        //const,int,void,if,else,while,break,continue,return
+
+
+        visitor.visit(tree);
+
+
     }
 
 
 }
-
-
-
-
-
-
-
-
 
 
 //            for (Token t : myTokens) {

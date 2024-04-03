@@ -11,10 +11,19 @@ public class ErrorListener extends BaseErrorListener {
     public static boolean isError = false;
 
 
-    public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
+    @Override
+    public void syntaxError(Recognizer<?, ?> recognizer,
+                            Object offendingSymbol,
+                            int line,
+                            int charPositionInLine,
+                            String msg,
+                            RecognitionException e) {
         isError = true;
         list.add("Error type B at Line " + line + ": baga");
+
+
     }
+
 
     public static void printLexerErrorInformation(){
         for(String s : list){

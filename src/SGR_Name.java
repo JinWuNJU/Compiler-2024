@@ -1,4 +1,6 @@
 enum SGR_Name {
+
+    //    \e[Xm
     UnknownSGR(-1),
     Reset(0),
     Bold(1),
