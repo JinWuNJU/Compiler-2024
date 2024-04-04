@@ -34,31 +34,6 @@ public class Main {
         }
         MyVisit visitor = new MyVisit();
         visitor.init();
-        //const,int,void,if,else,while,break,continue,return
-
-
         visitor.visit(tree);
-
-
     }
-
-
 }
-
-
-//            for (Token t : myTokens) {
-//                String text = t.getText();
-//                int line = t.getLine();
-//                int type = t.getType();
-//                String sym = vocabulary.getSymbolicName(type);
-//                if (sym.equals("INTEGER_CONST")) {
-//                    if (text.charAt(0) == '0' && text.length() >= 2) {
-//                        if (text.startsWith("0x") || text.startsWith("0X")) {
-//                            text = String.valueOf(Long.parseLong(text.substring(2), 16));
-//                        } else {
-//                            text = String.valueOf(Long.parseLong(text.substring(1), 8));
-//                        }
-//                    }
-//                }
-//                System.out.println(sym + " " + text + " at Line " + line + ".");
-//            }
