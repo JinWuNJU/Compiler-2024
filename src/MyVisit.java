@@ -479,11 +479,11 @@ public class MyVisit extends SysYParserBaseVisitor {
 
         ParserRuleContext context = (ParserRuleContext) node.getParent();
         if (node.getText().equals("{") || node.getText().equals("(") || node.getText().equals("[")) {
-            color = (color(rainbow[braket.size()], node.getText(), isUnderlined(currentContext)));
+            color = (color(rainbow[braket.size() %6], node.getText(), isUnderlined(currentContext)));
             braket.push(node.getText());
         } else if (node.getText().equals("}") || node.getText().equals(")") || node.getText().equals("]")) {
             braket.pop();
-            color = (color(rainbow[braket.size()], node.getText(), isUnderlined(currentContext)));
+            color = (color(rainbow[braket.size() %6], node.getText(), isUnderlined(currentContext)));
         } else if (BrightCyan.contains(node.getText())) {
             color = (color(SGR_Name.LightCyan, node.getText(), isUnderlined(currentContext)));
         } else if (BrightRed.contains(node.getText())) {
