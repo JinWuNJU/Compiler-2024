@@ -63,7 +63,7 @@ public class MyVisit extends SysYParserBaseVisitor {
     }
 
 
-    private String help(TerminalNode node) {
+    private String help(TerminalNode node) {//zui jin
         ParserRuleContext context = (ParserRuleContext) node.getParent();
         while (context != null) {
             if (context instanceof SysYParser.StmtContext) {
@@ -75,6 +75,18 @@ public class MyVisit extends SysYParserBaseVisitor {
         }
         return "";
     }
+
+    private String globalhelp(TerminalNode node) {
+        ParserRuleContext context = (ParserRuleContext) node.getParent();
+        while (context != null) {
+            if (context instanceof SysYParser.DeclContext) {
+                return "decl";
+            }
+            context = context.getParent();
+        }
+        return "";
+    }
+
 
     private Boolean isUnderlined(String context) {
         return "decl".equals(context);
@@ -283,7 +295,10 @@ public class MyVisit extends SysYParserBaseVisitor {
             isOut = true;
             if (isLeftBraceStandalone(node)) {
                 TerminalNode terminalNode = getPreviousLeafNode(node);
-                if (terminalNode.getSymbol().getType() != SysYParser.SEMICOLON) {
+                TerminalNode lastNode = getNextLeafNode(node);
+                if (terminalNode.getSymbol().getType() != SysYParser.SEMICOLON
+                        && lastNode.getSymbol().getType() != SysYParser.L_BRACE
+                        && terminalNode.getSymbol().getType() != SysYParser.L_BRACE) {
                     System.out.println();
                     printIndentation();
                 }
@@ -334,8 +349,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                         indentLevel++;
                         System.out.print(getHilight(nodeif) + " ");
                         isPrint = true;
-                    }
-                    else {
+                    } else {
                         System.out.print(" " + getHilight(nodeif) + " ");
                     }
                 }
@@ -366,9 +380,14 @@ public class MyVisit extends SysYParserBaseVisitor {
                 (node.getSymbol().getType() == SysYParser.R_BRACE && !isInDeclContext(node))
                 || (node.getSymbol().getType() == SysYParser.L_BRACE && !isInDeclContext(node))) {
 
-            if(getNextLeafNode(node).getSymbol().getType() == SysYParser.EOF){
+            if (getNextLeafNode(node).getSymbol().getType() == SysYParser.EOF) {
                 return super.visitTerminal(node);
             }
+//            if (node.getSymbol().getType() == SysYParser.L_BRACE &&
+//                    getNextLeafNode(node).getSymbol().getType() == SysYParser.L_BRACE) {
+////                //do nothing
+//            }
+//            else
             System.out.println();
             if (node.getSymbol().getType() == SysYParser.L_BRACE) {
                 if (!isSingleBrace(node)) {
@@ -377,7 +396,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             }
             if (node.getSymbol().getType() == SysYParser.R_BRACE) {
                 TerminalNode nextLeafNodeLeafNode = getNextLeafNode(node);
-                if(nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE){
+                if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE) {
                     indentLevel--;
                 }
 
@@ -419,20 +438,20 @@ public class MyVisit extends SysYParserBaseVisitor {
         String text = node.getText();
 
 
-        ParserRuleContext parent = (ParserRuleContext) node.getParent();
+            ParserRuleContext parent = (ParserRuleContext) node.getParent();
 
         if (parent instanceof SysYParser.FunctypeContext) {
-            color += " ";
-        }
-        else if (text.equals("const") || text.equals("int") || text.equals("void") || text.equals("if")
+            if (!isintival(getNextLeafNode(node)))
+                color += " ";
+        } else if (text.equals("const") || text.equals("int") || text.equals("void") || text.equals("if")
                 || text.equals("else") || text.equals("while")) {
-            if(text.equals("else")){
+            if (text.equals("else")) {
                 TerminalNode nodeif = getNextLeafNode(node);
-                if(nodeif.getSymbol().getType() == SysYParser.L_BRACE){
+                if (nodeif.getSymbol().getType() == SysYParser.L_BRACE) {
                     // do nothing
                 }
-            }
-            else {
+            } else {
+                if (!isintival(getNextLeafNode(node)))
                 color += " ";
             }
 
@@ -443,6 +462,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             if (nextLeafNode != null && nextLeafNode.getSymbol().getType() == SysYParser.SEMICOLON) {
                 // do nothing
             } else {
+                if (!isintival(getNextLeafNode(node)))
                 color += " ";
             }
         }
@@ -451,23 +471,41 @@ public class MyVisit extends SysYParserBaseVisitor {
                 || text.equals("%") || text.equals("=") || text.equals("==")
                 || text.equals("!=") || text.equals("<") || text.equals(">")
                 || text.equals("<=") || text.equals(">=") || text.equals("&&") || text.equals("||")) {
-
-            color = " " + color + " ";
+            if (!isintival(getNextLeafNode(node))){
+                color = " " + color +" ";
+            }
+            else
+            color = " " + color ;
         }
         if (text.equals("+") || text.equals("-") || text.equals("!")) {
             ParserRuleContext parent1 = (ParserRuleContext) node.getParent();
             if (parent1 instanceof SysYParser.UnaryOpContext) {
                 //do nothing
             } else {
-                color = " " + color + " ";
+                if (!isintival(getNextLeafNode(node))){
+                    color = " " + color+" ";
+                }
+                else
+                    color = " " + color ;
             }
 
         }
         if (text.equals(",")) {
+            if (!isintival(getNextLeafNode(node)))
             color += " ";
         }
 
         return color;
+    }
+    private boolean isintival(TerminalNode node){
+        if(node.getSymbol().getType() != SysYParser.L_BRACE){
+            return false;
+        }
+        ParserRuleContext parent = (ParserRuleContext) node.getParent();
+        if(parent instanceof SysYParser.InitValContext){
+            return true;
+        }
+        return false;
     }
 
 
@@ -475,29 +513,30 @@ public class MyVisit extends SysYParserBaseVisitor {
         String color = "";
         Vocabulary vocabulary = SysYParser.VOCABULARY;
         String currentContext = help(node);
+        String globalcurrentContext = globalhelp(node);
         int type = node.getSymbol().getType();
 
         ParserRuleContext context = (ParserRuleContext) node.getParent();
         if (node.getText().equals("{") || node.getText().equals("(") || node.getText().equals("[")) {
-            color = (color(rainbow[braket.size() %6], node.getText(), isUnderlined(currentContext)));
+            color = (color(rainbow[braket.size() % 6], node.getText(), isUnderlined(globalcurrentContext)));
             braket.push(node.getText());
         } else if (node.getText().equals("}") || node.getText().equals(")") || node.getText().equals("]")) {
             braket.pop();
-            color = (color(rainbow[braket.size() %6], node.getText(), isUnderlined(currentContext)));
+            color = (color(rainbow[braket.size() % 6], node.getText(), isUnderlined(globalcurrentContext)));
         } else if (BrightCyan.contains(node.getText())) {
-            color = (color(SGR_Name.LightCyan, node.getText(), isUnderlined(currentContext)));
+            color = (color(SGR_Name.LightCyan, node.getText(), isUnderlined(globalcurrentContext)));
         } else if (BrightRed.contains(node.getText())) {
-            color = (color(SGR_Name.LightRed, node.getText(), isUnderlined(currentContext)));
+            color = (color(SGR_Name.LightRed, node.getText(), isUnderlined(globalcurrentContext)));
         } else if (vocabulary.getSymbolicName(type).equals("INTEGER_CONST")) {
-            color = (color(SGR_Name.Magenta, node.getText(), isUnderlined(currentContext)));
+            color = (color(SGR_Name.Magenta, node.getText(), isUnderlined(globalcurrentContext)));
         } else if (vocabulary.getSymbolicName(type).equals("IDENT") && (context instanceof SysYParser.ExpContext || context instanceof SysYParser.FuncDefContext)) {
-            color = (color(SGR_Name.LightYellow, node.getText(), isUnderlined(currentContext)));
+            color = (color(SGR_Name.LightYellow, node.getText(), isUnderlined(globalcurrentContext)));
         } else if ("stmt".equals(currentContext)) {
-            color = (color(SGR_Name.White, node.getText(), isUnderlined(currentContext)));
+            color = (color(SGR_Name.White, node.getText(), isUnderlined(globalcurrentContext)));
         } else if ("decl".equals(currentContext)) {
-            color = (color(SGR_Name.LightMagenta, node.getText(), isUnderlined(currentContext)));
+            color = (color(SGR_Name.LightMagenta, node.getText(), isUnderlined(globalcurrentContext)));
         } else {
-            color = (color(SGR_Name.White, node.getText(), isUnderlined(currentContext)));
+            color = (color(SGR_Name.White, node.getText(), isUnderlined(globalcurrentContext)));
         }
         return color;
     }
