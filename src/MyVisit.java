@@ -303,6 +303,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     printIndentation();
                 }
             } else {
+                if(!isintival(getPreviousLeafNode(node)))
                 System.out.print(" ");
             }
         }

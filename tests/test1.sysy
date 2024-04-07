@@ -1,24 +1,60 @@
-const int a = 1;
-int b = 2;
-int A[10][12] = {8, {7,4}, 4};
+int g = 0;
+int m(){}
+int main()
+{
+    int n;
+    //scanf("%d", &n);
+    //getchar();
+    int palindrome[n];
 
-void print(int x) {
-}
-
-int func() {
-    int c;
+    int known[200];
+    while(1)
     {
-        print(a);
-        if (cond) {
-            c = a + b;
-            {
-            }
+        if (i % 2 == 0 && i % 20 != 0)
+        {
+            known[i] = ((i % 20) / 2 - 1) % 10 + 48;
         }
-        else if (cond2) {
-            return;
+        else if (i % 20 == 0)
+        {
+            known[i] = 9 + 48;
         }
         else
-            c = 1;
+        {
+            known[i] = i / 20 + 48;
+        }
     }
-    return -3;
+    int count = 0;
+    int output[n + 2 * count];
+    while(2)
+    {
+        if (palindrome[i] == 63 && palindrome[j] != 63)
+        {
+            palindrome[i] = palindrome[j];
+            output[i + count] = palindrome[i];
+        }
+        else if (palindrome[j] == 63 && palindrome[i] != 63)
+        {
+            palindrome[j] = palindrome[i];
+            output[i + count] = palindrome[i];
+        }
+        else if (palindrome[i] == 63 && palindrome[j] == 63)
+        {
+            count= count+1;
+            output[i + count - 1] = known[2 * count - 1];
+            output[i + count] = known[2 * count];
+        }
+        else
+        {
+            output[i + count] = palindrome[i];
+        }
+        
+    }while(3)
+        {
+            output[j] = output[i];
+        }
+    while(4)
+    {{{{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}}}
+
+    }
+    return 0;
 }
