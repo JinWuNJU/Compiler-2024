@@ -426,7 +426,17 @@ public class MyVisit extends SysYParserBaseVisitor {
         }
         else if (text.equals("const") || text.equals("int") || text.equals("void") || text.equals("if")
                 || text.equals("else") || text.equals("while")) {
-            color += " ";
+            if(text.equals("else")){
+                TerminalNode nodeif = getNextLeafNode(node);
+                if(nodeif.getSymbol().getType() == SysYParser.L_BRACE){
+                    // do nothing
+                }
+            }
+            else {
+                color += " ";
+            }
+
+
         }
         if (text.equals("return")) {
             TerminalNode nextLeafNode = getNextLeafNode(node);
