@@ -448,6 +448,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             } else {
                 color = " " + color + " ";
             }
+
         }
         if (text.equals(",")) {
             color += " ";
