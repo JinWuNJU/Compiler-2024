@@ -336,7 +336,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                         isPrint = true;
                     }
                     else {
-                        System.out.print(getHilight(nodeif) + " ");
+                        System.out.print(" " + getHilight(nodeif) + " ");
                     }
                 }
             } else if (nodeif != null && nodeif.getSymbol().getType() != SysYParser.L_BRACE) {
