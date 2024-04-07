@@ -365,8 +365,11 @@ public class MyVisit extends SysYParserBaseVisitor {
         if (node.getSymbol().getType() == SysYParser.SEMICOLON ||
                 (node.getSymbol().getType() == SysYParser.R_BRACE && !isInDeclContext(node))
                 || (node.getSymbol().getType() == SysYParser.L_BRACE && !isInDeclContext(node))) {
-            System.out.println();
 
+            if(getNextLeafNode(node).getSymbol().getType() == SysYParser.EOF){
+                return super.visitTerminal(node);
+            }
+            System.out.println();
             if (node.getSymbol().getType() == SysYParser.L_BRACE) {
                 if (!isSingleBrace(node)) {
                     indentLevel++;
