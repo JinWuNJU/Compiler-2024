@@ -171,7 +171,7 @@ public class MyVisit extends SysYParserBaseVisitor {
 
 
         for (int i = 0; i < indentLevel; i++) {
-            System.out.print("    ");
+            System.out.print("----");
         }
 
     }
@@ -304,7 +304,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                 }
             } else {
                 if(!isintival(getPreviousLeafNode(node)))
-                System.out.print(" ");
+                System.out.print("-");
             }
         }
         if (node.getSymbol().getType() == SysYParser.R_BRACE && !isInDeclContext(node)) {
@@ -348,10 +348,10 @@ public class MyVisit extends SysYParserBaseVisitor {
                     TerminalNode node1 = getNextLeafNode(Rparen);
                     if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
                         indentLevel++;
-                        System.out.print(getHilight(nodeif) + " ");
+                        System.out.print(getHilight(nodeif) + "-");
                         isPrint = true;
                     } else {
-                        System.out.print(" " + getHilight(nodeif) + " ");
+                        System.out.print("-" + getHilight(nodeif) + "-");
                     }
                 }
             } else if (nodeif != null && nodeif.getSymbol().getType() != SysYParser.L_BRACE) {
@@ -443,7 +443,7 @@ public class MyVisit extends SysYParserBaseVisitor {
 
         if (parent instanceof SysYParser.FunctypeContext) {
             if (!isintival(getNextLeafNode(node)))
-                color += " ";
+                color += "-";
         } else if (text.equals("const") || text.equals("int") || text.equals("void") || text.equals("if")
                 || text.equals("else") || text.equals("while")) {
             if (text.equals("else")) {
@@ -453,7 +453,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                 }
             } else {
                 if (!isintival(getNextLeafNode(node)))
-                color += " ";
+                color += "-";
             }
 
 
@@ -464,7 +464,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                 // do nothing
             } else {
                 if (!isintival(getNextLeafNode(node)))
-                color += " ";
+                color += "-";
             }
         }
 
@@ -473,10 +473,10 @@ public class MyVisit extends SysYParserBaseVisitor {
                 || text.equals("!=") || text.equals("<") || text.equals(">")
                 || text.equals("<=") || text.equals(">=") || text.equals("&&") || text.equals("||")) {
             if (!isintival(getNextLeafNode(node))){
-                color = " " + color +" ";
+                color = "-" + color +"-";
             }
             else
-            color = " " + color ;
+            color = "-" + color ;
         }
         if (text.equals("+") || text.equals("-") || text.equals("!")) {
             ParserRuleContext parent1 = (ParserRuleContext) node.getParent();
@@ -484,16 +484,16 @@ public class MyVisit extends SysYParserBaseVisitor {
                 //do nothing
             } else {
                 if (!isintival(getNextLeafNode(node))){
-                    color = " " + color+" ";
+                    color = "-" + color+"-";
                 }
                 else
-                    color = " " + color ;
+                    color = "-" + color ;
             }
 
         }
         if (text.equals(",")) {
             if (!isintival(getNextLeafNode(node)))
-            color += " ";
+            color += "-";
         }
 
         return color;
