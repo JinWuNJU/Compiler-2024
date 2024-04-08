@@ -447,9 +447,9 @@ public class MyVisit extends SysYParserBaseVisitor {
                     indentLevel--;
                 }
 
-                if (anElse != null && (anElse.getSymbol().getType() == SysYParser.ELSE)) {
-                    indentLevel--;
-                }
+//                if (anElse != null && (anElse.getSymbol().getType() == SysYParser.ELSE)) {
+//                    indentLevel--;
+//                }
                 if (nextLeafNode.getSymbol().getType() == SysYParser.ELSE
                         || ((index > 0) && (index == childcount - 1))) {
                     indentLevel--;
