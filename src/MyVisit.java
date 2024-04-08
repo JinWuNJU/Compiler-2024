@@ -15,6 +15,7 @@ public class MyVisit extends SysYParserBaseVisitor {
 
     private Set<String> BrightCyan = new HashSet<>();
 
+    private HashMap<TerminalNode, Integer> map = new HashMap<>();
     private Set<String> BrightRed = new HashSet<>();
 
     public void init() {
@@ -293,6 +294,23 @@ public class MyVisit extends SysYParserBaseVisitor {
 
         return null;
     }
+    private TerminalNode getElse2(TerminalNode node) {
+        ParserRuleContext parent = (ParserRuleContext) node.getParent();
+        ParserRuleContext temp = parent.getParent();
+        if(temp != null){
+            ParserRuleContext parentParent =temp.getParent();
+            if(parentParent != null){
+                int index = parentParent.children.indexOf(temp);
+                if(index >= 1 && parentParent.getChild(index - 1) instanceof TerminalNode){
+                    TerminalNode parentChild = (TerminalNode) parentParent.getChild(index-1);
+                    if (parentChild != null && parentChild.getSymbol().getType() == SysYParser.ELSE) {
+                        return parentChild;
+                    }
+                }
+            }
+        }
+        return null;
+    }
 
     private TerminalNode getRightParen(TerminalNode node) {
         ParserRuleContext parent = (ParserRuleContext) node.getParent();
@@ -306,6 +324,19 @@ public class MyVisit extends SysYParserBaseVisitor {
             }
         }
         return null;
+    }
+    private int findIf(TerminalNode node){
+        ParserRuleContext parent = (ParserRuleContext) node.getParent();
+        int len = parent.getChildCount();
+        for (int i = 0; i < len; i++) {
+            if (parent.getChild(i) instanceof TerminalNode) {
+                TerminalNode parentChild = (TerminalNode) parent.getChild(i);
+                if (parentChild.getSymbol().getType() == SysYParser.IF) {
+                    return map.get(parentChild);
+                }
+            }
+        }
+        return -1;
     }
 
     @Override
@@ -365,6 +396,10 @@ public class MyVisit extends SysYParserBaseVisitor {
 //  ************************************************************************************
 
 
+        if(node.getSymbol().getType() == SysYParser.IF){
+            map.put(node,indentLevel);
+        }
+
         if (node.getSymbol().getType() == SysYParser.ELSE) {
             TerminalNode nodeif = getNextLeafNode(node);
             if (nodeif != null && nodeif.getSymbol().getType() == SysYParser.IF) {
@@ -423,13 +458,20 @@ public class MyVisit extends SysYParserBaseVisitor {
                 }
             }
             if (node.getSymbol().getType() == SysYParser.R_BRACE) {
+                TerminalNode anElse = getElse2(node);
                 TerminalNode nextLeafNodeLeafNode = getNextLeafNode(node);
                 if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE) {
                     indentLevel--;
                 }
-//                if(nextLeafNodeLeafNode != null &&nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.SEMICOLON) {
-//                    indentLevel--;
-//                }
+//////
+
+                if (anElse != null && (anElse.getSymbol().getType() == SysYParser.ELSE)) {
+                    indentLevel--;
+                }
+                if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.ELSE) {
+                    indentLevel = findIf(nextLeafNodeLeafNode);
+                }
+
 
             }
             if (node.getSymbol().getType() == SysYParser.SEMICOLON) {
@@ -447,13 +489,18 @@ public class MyVisit extends SysYParserBaseVisitor {
                     indentLevel--;
                 }
 
-//                if (anElse != null && (anElse.getSymbol().getType() == SysYParser.ELSE)) {
-//                    indentLevel--;
-//                }
+                if (anElse != null && (anElse.getSymbol().getType() == SysYParser.ELSE)) {
+                    indentLevel--;
+                }
                 if (nextLeafNode.getSymbol().getType() == SysYParser.ELSE
                         || ((index > 0) && (index == childcount - 1))) {
                     indentLevel--;
                 }
+
+                if (nextLeafNode.getSymbol().getType() == SysYParser.ELSE) {
+                    indentLevel = findIf(nextLeafNode);
+                }
+
 
 
             }
