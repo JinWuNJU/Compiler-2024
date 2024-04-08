@@ -52,7 +52,7 @@ enum SGR_Name {
     LigthCyanBG(106),
     WhiteBG(107);
 
-    private SGR_Name(int SGR) {
+    SGR_Name(int SGR) {
         this.SGR = SGR;
     }
 
