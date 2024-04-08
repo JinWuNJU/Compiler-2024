@@ -179,6 +179,7 @@ public class MyVisit extends SysYParserBaseVisitor {
 
         for (int i = 0; i < indentLevel; i++) {
             System.out.print("    ");
+            isOut = true;
         }
 
     }
@@ -305,7 +306,8 @@ public class MyVisit extends SysYParserBaseVisitor {
                 TerminalNode lastNode = getNextLeafNode(node);
                 if (terminalNode.getSymbol().getType() != SysYParser.SEMICOLON
                         && lastNode.getSymbol().getType() != SysYParser.L_BRACE
-                        && terminalNode.getSymbol().getType() != SysYParser.L_BRACE) {
+                        && terminalNode.getSymbol().getType() != SysYParser.L_BRACE
+                        && terminalNode.getSymbol().getType() != SysYParser.R_BRACE) {
                     System.out.println();
                     printIndentation();
                 }
@@ -352,6 +354,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             if (nodeif != null && nodeif.getSymbol().getType() == SysYParser.IF) {
                 TerminalNode Rparen = getRightParen(nodeif);
                 if (Rparen != null) {
+                    isOut = true;
                     TerminalNode node1 = getNextLeafNode(Rparen);
                     if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
                         indentLevel++;
@@ -365,6 +368,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                 indentLevel++;
                 System.out.println();
                 printIndentation();
+                isOut = true;
 
             }
         }
@@ -430,10 +434,12 @@ public class MyVisit extends SysYParserBaseVisitor {
             }
 
             printIndentation();
+            isOut =true;
         }
 
         if (node.getSymbol().getType() == SysYParser.R_PAREN) {
             if (isPrint) {
+                isOut =true;
                 System.out.println();
                 printIndentation();
             }
