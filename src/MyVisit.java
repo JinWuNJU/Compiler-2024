@@ -355,7 +355,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     TerminalNode node1 = getNextLeafNode(Rparen);
                     if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
                         indentLevel++;
-                        System.out.print(getHilight(nodeif) + " ");
+                        System.out.print(" " +getHilight(nodeif) + " ");
                         isPrint = true;
                     } else {
                         System.out.print(" " + getHilight(nodeif) + " ");
