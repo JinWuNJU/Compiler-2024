@@ -427,9 +427,9 @@ public class MyVisit extends SysYParserBaseVisitor {
                 if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE) {
                     indentLevel--;
                 }
-                if(nextLeafNodeLeafNode != null &&nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.SEMICOLON) {
-                    indentLevel--;
-                }
+//                if(nextLeafNodeLeafNode != null &&nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.SEMICOLON) {
+//                    indentLevel--;
+//                }
 
             }
             if (node.getSymbol().getType() == SysYParser.SEMICOLON) {
