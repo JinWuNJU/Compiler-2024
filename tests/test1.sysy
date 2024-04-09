@@ -3,20 +3,121 @@ int b = 2;
 int A[10] = {8, 7, 4};
 
 void print(int x) {
-
-
-
-if(3) if(6)
-if(2)2;
-
-else if(4) {5;
-if(7) 7;}
-else if(4) 5;
-else {5;}
-
-
 }
 
+void print(int x[][6]) {
+}
+
+int func() {
+    int c;
+    if (asd)
+        c;
+    else
+        b();
+    if (asd)
+        c;
+    else if (true) {
+        int a;
+    }
+    b();
+    if (asd)
+        c;
+    else
+        while (true)
+
+                i + 1;
 
 
 
+    b();
+    {
+        print(a);
+        if (cond) {
+            c = a + b;
+            {
+            }
+        }
+        else if (cond2) {
+            return;
+        }
+        else
+            c = 1;
+    }
+    return -3;
+}
+int n;
+
+void putint(int i, int asdasd) {
+    {
+        {
+            {
+                {
+                    {
+                        {
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+int bubblesort(int arr[]) {
+    int i;
+    int j;
+    i = 0;
+    while (i < n - 1) {
+        j = 0;
+        while (j < n - i - 1) {
+            if (arr[j] > arr[j + 1]) {
+                int tmp;
+            }
+        }
+    }
+    while (true)
+        hell();
+    {
+        return;
+    }
+}
+int A[10] = {8, 7, a + b, 4};
+const int i = 5;
+
+int if_else() {
+    int a, b, c = 6;
+    if (a <= b && b <= c)
+        sad();
+    else if (true) {
+        if (true)
+            return 2;
+        else if (false){
+            while (true) {
+            }
+            }
+        else
+            continue;
+    }
+    else if (true) {
+        return;
+    }
+    if (true)
+        return;
+    else
+        return;
+    if (end)
+        while (true) {
+            return true;
+            if (a[1][2] + true) {
+                const int i = 5;
+                continue;
+                {
+                    return 6 * 4 / 2;
+                }
+            }
+        }
+    int v =2;
+    ;
+}

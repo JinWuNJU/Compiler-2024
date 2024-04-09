@@ -6,12 +6,19 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.*;
 
 public class MyVisit extends SysYParserBaseVisitor {
+
+
+
+
     //BrightRed,BrightGreen,BrightYellow,BrightBlue,BrightMagenta,BrightCyan
     private int[] rainbow = new int[]{SGR_Name.LightRed.SGR, SGR_Name.LightGreen.SGR,
             SGR_Name.LightYellow.SGR, SGR_Name.LightBlue.SGR, SGR_Name.LightMagenta.SGR, SGR_Name.LightCyan.SGR};
 
     private boolean isOut = false;
     private Stack<String> braket = new Stack<>();
+
+    private Set<TerminalNode> baga = new HashSet<>();
+    private Stack<TerminalNode> invisible = new Stack<>();
 
     private Set<String> BrightCyan = new HashSet<>();
 
@@ -67,6 +74,25 @@ public class MyVisit extends SysYParserBaseVisitor {
             return "\033[4m" + "\033[" + sgr_name + "m" + s + "\033[0m";
         }
         return "\033[" + sgr_name + "m" + s + "\033[0m";
+    }
+//  if   )
+//  else
+//  while )
+    private ParserRuleContext getBrother(TerminalNode node){
+        ParserRuleContext parent = (ParserRuleContext) node.getParent();
+        int index = parent.children.indexOf(node);
+        return (ParserRuleContext) parent.getChild(index + 1);
+    }
+
+
+
+    public TerminalNode getRight(ParseTree ctx) {
+        if(ctx instanceof TerminalNode) {
+            return (TerminalNode) ctx;
+        }
+        else {
+            return getRight( ctx.getChild(ctx.getChildCount() - 1));
+        }
     }
 
 
@@ -291,6 +317,52 @@ public class MyVisit extends SysYParserBaseVisitor {
         }
         return null;
     }
+    public int check(TerminalNode node){
+        int cut=0;
+        while (true){
+            if(!invisible.isEmpty() && invisible.peek().equals(node)){
+                cut ++;
+                invisible.pop();
+            }
+            else {
+                return cut;
+            }
+        }
+
+    }
+
+    public void meetLL(TerminalNode node){
+        if (!isSingleBrace(node)) {
+            indentLevel++;
+        }
+        System.out.println();
+        printIndentation();
+        isOut =true;
+    }
+    public void meetLL(){
+        indentLevel++;
+        System.out.println();
+        printIndentation();
+        isOut =true;
+    }
+
+    public void meetRR(TerminalNode node){
+        TerminalNode nextLeafNodeLeafNode = getNextLeafNode(node);
+        if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE) {
+            indentLevel--;
+        }
+        System.out.println();
+        printIndentation();
+        isOut =true;
+    }
+
+
+    // ) || else
+    public void caozuo(TerminalNode node){
+        ParserRuleContext brother = getBrother(node);
+        invisible.push(getRight(brother));
+        baga.add(node);
+    }
 
     @Override
     public Object visitTerminal(TerminalNode node) {
@@ -349,6 +421,9 @@ public class MyVisit extends SysYParserBaseVisitor {
 //  ************************************************************************************
 
 
+
+
+
         if (node.getSymbol().getType() == SysYParser.ELSE) {
             TerminalNode nodeif = getNextLeafNode(node);
             if (nodeif != null && nodeif.getSymbol().getType() == SysYParser.IF) {
@@ -357,7 +432,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     isOut = true;
                     TerminalNode node1 = getNextLeafNode(Rparen);
                     if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
-                        indentLevel++;
+                        caozuo(Rparen);
                         System.out.print(" " +getHilight(nodeif) + " ");
                         isPrint = true;
                     } else {
@@ -365,11 +440,8 @@ public class MyVisit extends SysYParserBaseVisitor {
                     }
                 }
             } else if (nodeif != null && nodeif.getSymbol().getType() != SysYParser.L_BRACE) {
-                indentLevel++;
-                System.out.println();
-                printIndentation();
-                isOut = true;
-
+                caozuo(node);
+                meetLL();
             }
         }
 
@@ -381,8 +453,8 @@ public class MyVisit extends SysYParserBaseVisitor {
             if (Rparen != null) {
                 TerminalNode node1 = getNextLeafNode(Rparen);
                 if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
-                    indentLevel++;
-                    isPrint = true;
+                    caozuo(Rparen);
+
                 }
             }
         }
@@ -400,51 +472,51 @@ public class MyVisit extends SysYParserBaseVisitor {
 ////                //do nothing
 //            }
 //            else
-            System.out.println();
+
             if (node.getSymbol().getType() == SysYParser.L_BRACE) {
-                if (!isSingleBrace(node)) {
-                    indentLevel++;
-                }
+                meetLL(node);
             }
             if (node.getSymbol().getType() == SysYParser.R_BRACE) {
+                int cut = check(node);
                 TerminalNode nextLeafNodeLeafNode = getNextLeafNode(node);
                 if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE) {
                     indentLevel--;
                 }
+                while (cut -- > 0){
+                    indentLevel--;
+                }
+                System.out.println();
+                printIndentation();
+                isOut = true;
 
             }
             if (node.getSymbol().getType() == SysYParser.SEMICOLON) {
+                int cut = check(node);
                 TerminalNode nextLeafNode = getNextLeafNode(node);
                 ParserRuleContext parent = (ParserRuleContext) node.getParent();
-                int index = 0;
-                int childcount = 0;
-                if (parent != null) {
-                    ParserRuleContext parentParent = parent.getParent();
-                    index = parentParent.children.indexOf(parent);
-                    childcount = parentParent.getChildCount();
-                }
-                if (nextLeafNode != null && (nextLeafNode.getSymbol().getType() == SysYParser.R_BRACE)) {
+                if (nextLeafNode != null && (nextLeafNode.getSymbol().getType() == SysYParser.R_BRACE )) {
                     indentLevel--;
                 }
-                if (nextLeafNode.getSymbol().getType() == SysYParser.ELSE || ((index > 0) && (index == childcount - 1))) {
+                while (cut -- > 0){
                     indentLevel--;
                 }
 
-
-            }
-
-            printIndentation();
-            isOut =true;
-        }
-
-        if (node.getSymbol().getType() == SysYParser.R_PAREN) {
-            if (isPrint) {
-                isOut =true;
                 System.out.println();
                 printIndentation();
+                isOut =true;
             }
-            isPrint = false;
+
+
         }
+
+        if (node.getSymbol().getType() == SysYParser.R_PAREN && baga.contains(node)) {
+
+                meetLL();
+
+
+        }
+
+
         return super.visitTerminal(node);
     }
 
@@ -512,8 +584,7 @@ public class MyVisit extends SysYParserBaseVisitor {
         return color;
     }
     private boolean isintival(TerminalNode node){
-        if(node.getSymbol().getType() != SysY
-        Parser.L_BRACE){
+        if(node.getSymbol().getType() != SysYParser.L_BRACE){
             return false;
         }
         ParserRuleContext parent = (ParserRuleContext) node.getParent();
