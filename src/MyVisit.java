@@ -488,10 +488,6 @@ public class MyVisit extends SysYParserBaseVisitor {
                 if (nextLeafNode != null && (nextLeafNode.getSymbol().getType() == SysYParser.R_BRACE)) {
                     indentLevel--;
                 }
-                if (nextLeafNode != null && (nextLeafNode.getSymbol().getType() == SysYParser.R_BRACE)
-                    && isLeftBraceStandalone(nextLeafNode)) {
-                    indentLevel++;
-                }
 
                 if (anElse != null && (anElse.getSymbol().getType() == SysYParser.ELSE)) {
                     indentLevel--;
@@ -503,17 +499,6 @@ public class MyVisit extends SysYParserBaseVisitor {
 
                 if (nextLeafNode.getSymbol().getType() == SysYParser.ELSE) {
                     indentLevel = findIf(nextLeafNode);
-                    ParserRuleContext f = (ParserRuleContext) node.getParent();
-                    ParserRuleContext ff =  f.getParent();
-                    if(ff.getChild(0) instanceof TerminalNode){
-                        TerminalNode ifffff = (TerminalNode)ff.getChild(0);
-                        if(ifffff.getSymbol().getType() == SysYParser.IF){
-                            if(getPreviousLeafNode(ifffff).getSymbol().getType() == SysYParser.ELSE){
-                                indentLevel--;
-                            }
-                        }
-                    }
-
                 }
 
 
