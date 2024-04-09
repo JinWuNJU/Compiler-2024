@@ -499,6 +499,17 @@ public class MyVisit extends SysYParserBaseVisitor {
 
                 if (nextLeafNode.getSymbol().getType() == SysYParser.ELSE) {
                     indentLevel = findIf(nextLeafNode);
+                    ParserRuleContext f = (ParserRuleContext) node.getParent();
+                    ParserRuleContext ff =  f.getParent();
+                    if(ff.getChild(0) instanceof TerminalNode){
+                        TerminalNode ifffff = (TerminalNode)ff.getChild(0);
+                        if(ifffff.getSymbol().getType() == SysYParser.IF){
+                            if(getPreviousLeafNode(ifffff).getSymbol().getType() == SysYParser.ELSE){
+                                indentLevel--;
+                            }
+                        }
+                    }
+
                 }
 
 
