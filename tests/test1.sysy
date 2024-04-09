@@ -2,23 +2,20 @@ const int a = 1;
 int b = 2;
 int A[10] = {8, 7, 4};
 
-void print(int x) {{{{{{}}}}}
+void print(int x) {
+
+
+
+if(3) if(6)
+if(2)2;
+
+
+else if(4) 5;
+else {5;}
+
+
 }
 
-int func() {
-    int c;
-    {
-        print(a);
-        if (cond) {
-            c = a + b;
-            {;;;;;;
-            }
-        }
-        else if (cond2) {
-            return;
-        }
-        else
-            c = 1;;;;;;
-    };;;;
-    return -3;
-}
+
+
+

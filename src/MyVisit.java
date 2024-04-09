@@ -380,7 +380,8 @@ public class MyVisit extends SysYParserBaseVisitor {
             TerminalNode Rparen = getRightParen(node);
             if (Rparen != null) {
                 TerminalNode node1 = getNextLeafNode(Rparen);
-                if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
+                if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE
+                                    && node1.getSymbol().getType() != SysYParser.IF) {
                     indentLevel++;
                     isPrint = true;
                 }
