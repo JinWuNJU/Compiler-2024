@@ -400,7 +400,7 @@ public class MyVisit extends SysYParserBaseVisitor {
 
         ParserRuleContext context = (ParserRuleContext) node.getParent();
         if (context instanceof SysYParser.FunctypeContext) {
-            if (isOut) {
+            if(!isFirst(node)){
                 System.out.println();
             }
         }
@@ -590,6 +590,20 @@ public class MyVisit extends SysYParserBaseVisitor {
         ParserRuleContext parent = (ParserRuleContext) node.getParent();
         if(parent instanceof SysYParser.InitValContext){
             return true;
+        }
+        return false;
+    }
+
+    private boolean isFirst(TerminalNode node){
+        ParserRuleContext parent = (ParserRuleContext) node.getParent();
+        if(parent instanceof SysYParser.FunctypeContext){
+            ParserRuleContext parent1 = (ParserRuleContext)parent.getParent();
+            if(parent1 instanceof SysYParser.FuncDefContext){
+                ParserRuleContext parent2 = (ParserRuleContext)parent1.getParent();
+                if(parent2 instanceof SysYParser.CompUnitContext && parent2.children.indexOf(parent1) == 0){
+                    return true;
+                }
+            }
         }
         return false;
     }

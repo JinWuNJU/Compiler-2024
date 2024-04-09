@@ -1,6 +1,9 @@
-const int a = 1;
-int b = 2;
-int A[10] = {8, 7, 4};
+
+
+
+
+
+
 
 void print(int x) {
 }
