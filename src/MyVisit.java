@@ -488,6 +488,10 @@ public class MyVisit extends SysYParserBaseVisitor {
                 if (nextLeafNode != null && (nextLeafNode.getSymbol().getType() == SysYParser.R_BRACE)) {
                     indentLevel--;
                 }
+                if (nextLeafNode != null && (nextLeafNode.getSymbol().getType() == SysYParser.R_BRACE)
+                    && isLeftBraceStandalone(nextLeafNode)) {
+                    indentLevel++;
+                }
 
                 if (anElse != null && (anElse.getSymbol().getType() == SysYParser.ELSE)) {
                     indentLevel--;
