@@ -588,7 +588,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             return false;
         }
         ParserRuleContext parent = (ParserRuleContext) node.getParent();
-        if(parent instanceof SysYParser.InitValContext){
+        if(parent instanceof SysYParser.InitValContext || parent instanceof SysYParser.ConstInitValContext){
             return true;
         }
         return false;
