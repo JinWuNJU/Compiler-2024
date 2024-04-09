@@ -380,8 +380,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             TerminalNode Rparen = getRightParen(node);
             if (Rparen != null) {
                 TerminalNode node1 = getNextLeafNode(Rparen);
-                if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE
-                                    && node1.getSymbol().getType() != SysYParser.IF) {
+                if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
                     indentLevel++;
                     isPrint = true;
                 }
@@ -513,7 +512,8 @@ public class MyVisit extends SysYParserBaseVisitor {
         return color;
     }
     private boolean isintival(TerminalNode node){
-        if(node.getSymbol().getType() != SysYParser.L_BRACE){
+        if(node.getSymbol().getType() != SysY
+        Parser.L_BRACE){
             return false;
         }
         ParserRuleContext parent = (ParserRuleContext) node.getParent();
