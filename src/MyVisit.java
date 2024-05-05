@@ -370,17 +370,22 @@ public class MyVisit extends SysYParserBaseVisitor {
         if(ctx.ASSIGN() != null){
             Type tp1 = (Type) visitLVal(ctx.lVal());
             Type tp2 = (Type) visitExp(ctx.exp());
-            if (tp1 != null && tp2 != null && (tp1.getClass() != tp2.getClass())){
-                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.ASSIGN().getSymbol().getLine(),
-                        ctx.ASSIGN().getText());
+            if(tp1 == null || tp2 == null){
+                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.exp().getStart().getLine(),
+                        ctx.exp().getStart().getText());
+                return null;
+            }
+            if (tp1.getClass() != tp2.getClass()){
+                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.exp().getStart().getLine(),
+                        ctx.exp().getStart().getText());
                 return null;
             }
             if(tp2 instanceof ArrayType && tp1 instanceof ArrayType){
                 ArrayType temp1 = (ArrayType) tp1;
                 ArrayType temp2 = (ArrayType) tp2;
                 if(temp1.getDimension() != temp2.getDimension()){
-                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.ASSIGN().getSymbol().getLine(),
-                            ctx.ASSIGN().getText());
+                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.exp().getStart().getLine(),
+                            ctx.exp().getStart().getText());
                     return null;
                 }
             }
@@ -464,8 +469,16 @@ public class MyVisit extends SysYParserBaseVisitor {
             return IntType.getInt32();
         }
         else {//FunctionType
-            OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
-                    ctx.IDENT().getText());
+            if(ctx.getParent() instanceof SysYParser.StmtContext){
+                OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+                        ctx.IDENT().getText());
+                return null;
+            }
+            if(ctx.L_BRACKT().isEmpty()){
+                OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.IDENT().getSymbol().getLine(),
+                        ctx.IDENT().getText());
+                return null;
+            }
             return null;
         }
 
