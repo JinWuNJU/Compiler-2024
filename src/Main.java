@@ -33,7 +33,12 @@ public class Main {
             return;
         }
         MyVisit visitor = new MyVisit();
-        visitor.init();
+
         visitor.visit(tree);
+
+        if (!OutputHelper.isFalse){
+            System.err.println("No semantic errors in the program!");
+        }
+
     }
 }

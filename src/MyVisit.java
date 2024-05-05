@@ -1,645 +1,489 @@
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.Vocabulary;
-import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.junit.Test;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MyVisit extends SysYParserBaseVisitor {
 
+    Scope globalScope = null;
+    Scope curScope = null;
+
+    Type curRetTpye = null;
 
 
+    @Override
+    public Object visitProgram(SysYParser.ProgramContext ctx) {
+        globalScope = new GlobalScope(null);
+        curScope = globalScope;
 
-    //BrightRed,BrightGreen,BrightYellow,BrightBlue,BrightMagenta,BrightCyan
-    private int[] rainbow = new int[]{SGR_Name.LightRed.SGR, SGR_Name.LightGreen.SGR,
-            SGR_Name.LightYellow.SGR, SGR_Name.LightBlue.SGR, SGR_Name.LightMagenta.SGR, SGR_Name.LightCyan.SGR};
-
-    private boolean isOut = false;
-    private Stack<String> braket = new Stack<>();
-
-    private Set<TerminalNode> baga = new HashSet<>();
-    private Stack<TerminalNode> invisible = new Stack<>();
-
-    private Set<String> BrightCyan = new HashSet<>();
-
-    private Set<String> BrightRed = new HashSet<>();
-
-    public void init() {
-
-        BrightCyan.add("const");
-        BrightCyan.add("int");
-        BrightCyan.add("void");
-        BrightCyan.add("if");
-        BrightCyan.add("else");
-        BrightCyan.add("while");
-        BrightCyan.add("break");
-        BrightCyan.add("continue");
-        BrightCyan.add("return");
-
-        BrightRed.add("+");
-        BrightRed.add("-");
-        BrightRed.add("*");
-        BrightRed.add("/");
-        BrightRed.add("%");
-        BrightRed.add("=");
-        BrightRed.add("==");
-        BrightRed.add("!=");
-        BrightRed.add("<");
-        BrightRed.add(">");
-        BrightRed.add("<=");
-        BrightRed.add(">=");
-        BrightRed.add("!");
-        BrightRed.add("&&");
-        BrightRed.add("||");
-        BrightRed.add(",");
-        BrightRed.add(";");
+        return super.visitProgram(ctx);
     }
-    private String color(String s, boolean isUnderlined) {
-        if (isUnderlined) {
-            return "\033[4m" +  s + "\033[0m";
+
+    @Override
+    public Void visitFuncDef(SysYParser.FuncDefContext ctx) {
+        String funcName = ctx.IDENT().getText();
+        Type retType;
+        if (curScope.find(funcName)) { // curScope为当前的作用域
+            OutputHelper.printSemanticError(ErrorType.Redefinde_function, ctx.IDENT().getSymbol().getLine(),
+                    ctx.IDENT().getText());
+            return null;
+
         }
-        return s + "\033[0m";
-    }
-
-
-    private String color(SGR_Name sgr_name, String s, boolean isUnderlined) {
-        if (isUnderlined) {
-            return "\033[4m" + "\033[" + sgr_name.SGR + "m" + s + "\033[0m";
-        }
-        return "\033[" + sgr_name.SGR + "m" + s + "\033[0m";
-    }
-
-    private String color(int sgr_name, String s, boolean isUnderlined) {
-        if (isUnderlined) {
-            return "\033[4m" + "\033[" + sgr_name + "m" + s + "\033[0m";
-        }
-        return "\033[" + sgr_name + "m" + s + "\033[0m";
-    }
-//  if   )
-//  else
-//  while )
-    private ParserRuleContext getBrother(TerminalNode node){
-        ParserRuleContext parent = (ParserRuleContext) node.getParent();
-        int index = parent.children.indexOf(node);
-        return (ParserRuleContext) parent.getChild(index + 1);
-    }
-
-
-
-    public TerminalNode getRight(ParseTree ctx) {
-        if(ctx instanceof TerminalNode) {
-            return (TerminalNode) ctx;
+        String type_Str = ctx.getChild(0).getText();
+        if ("int".equals(type_Str)) {
+            retType = IntType.getInt32();
         }
         else {
-            return getRight( ctx.getChild(ctx.getChildCount() - 1));
+            retType = VoidType.getVoidType();
         }
+
+        List<Type> fParams_Type = visitFuncFParams(ctx.funcFParams());//null返回空list
+        curScope.getSymbols().put(funcName, new FunctionType(retType, fParams_Type));
+        curRetTpye = retType;
+        if(fParams_Type.isEmpty()){//空参
+            visitBlock(ctx.block());
+        }
+        else {//将新的参数加入新的scope
+            visitBlock(ctx.block(),makeFParams(ctx.funcFParams()));
+        }
+
+        return null;
     }
 
 
-    private String help(TerminalNode node) {//zui jin
-        ParserRuleContext context = (ParserRuleContext) node.getParent();
-        while (context != null) {
-            if (context instanceof SysYParser.StmtContext) {
-                return "stmt";
-            } else if (context instanceof SysYParser.DeclContext) {
-                return "decl";
+    public Object visitBlock(SysYParser.BlockContext ctx, Map<String,Type>fParams) {
+        LocalScope localScope = new LocalScope(curScope);
+        curScope = localScope;
+        curScope.getSymbols().putAll(fParams);
+        ctx.blockItem().forEach(this::visit); // 依次visit block中的节点
+        //切换回父级作用域
+        curScope = curScope.getEnclosingScope();
+        return null;
+    }
+
+
+    public Object visitBlock(SysYParser.BlockContext ctx) {
+        LocalScope localScope = new LocalScope(curScope);
+        curScope = localScope;
+        ctx.blockItem().forEach(this::visit); // 依次visit block中的节点
+        //切换回父级作用域
+        curScope = curScope.getEnclosingScope();
+
+        return null;
+    }
+
+    @Override
+    public Object visitConstdecl(SysYParser.ConstdeclContext ctx) {
+        for (int i = 0; i < ctx.constdef().size(); i ++) {
+            visit(ctx.constdef(i)); // 依次visit def，即依次visit c=4 和 d=5
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitVardecl(SysYParser.VardeclContext ctx) {
+        for (int i = 0; i < ctx.vardef().size(); i ++) {
+            visit(ctx.vardef(i)); // 依次visit def，即依次visit c=4 和 d=5
+        }
+        return null;
+    }
+
+
+    private Map<String,Type>makeFParams(SysYParser.FuncFParamsContext ctx){
+        Map<String,Type>map = new HashMap<>();
+        List<SysYParser.FuncFParamContext> funcFParams = ctx.funcFParam();
+        for (SysYParser.FuncFParamContext param : funcFParams) {
+            if(curScope.find(param.getText())){//是否在本作用域中定义过变量
+                OutputHelper.printSemanticError(ErrorType.Redefined_variable,param.IDENT().getSymbol().getLine(),
+                        param.IDENT().getText());
+                return map;
             }
-            context = context.getParent();
-        }
-        return "";
-    }
-
-    private String globalhelp(TerminalNode node) {
-        ParserRuleContext context = (ParserRuleContext) node.getParent();
-        while (context != null) {
-            if (context instanceof SysYParser.DeclContext) {
-                return "decl";
+            if(param != null && !param.L_BRACKT().isEmpty()){//默认1维数组为1(函数形参)
+                map.put(param.IDENT().getText(),new ArrayType(1));
             }
-            context = context.getParent();
+            else {
+                map.put(param.IDENT().getText(),IntType.getInt32());
+            }
         }
-        return "";
+        return map;
     }
-
-
-    private Boolean isUnderlined(String context) {
-        return "decl".equals(context);
-    }
-
-
-    boolean isPrint = false;
-
-    private boolean isLeftBraceStandalone(TerminalNode node) {
-        ParserRuleContext ctx = (ParserRuleContext) node.getParent();
-        if (ctx instanceof SysYParser.BlockContext) {
-            ctx = ctx.getParent();
-            if (ctx instanceof SysYParser.StmtContext) {
-                ctx = ctx.getParent();
-                if (ctx instanceof SysYParser.BlockItemContext) {
-                    ctx = ctx.getParent();
-                    if (ctx instanceof SysYParser.BlockContext) {
-                        return true;
-                    }
+    @Override
+    public List<Type> visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
+        List<Type> list = new ArrayList<>();
+        if(ctx == null){
+            return list;
+        }
+        List<SysYParser.FuncFParamContext> funcFParams = ctx.funcFParam();
+        if (funcFParams != null) {
+            list = funcFParams.stream().map(param ->
+            {
+                if(param != null && !param.L_BRACKT().isEmpty()){//默认1维数组为空list
+                    return new ArrayType(1);
                 }
-            }
+                else {
+                    return IntType.getInt32();
+                }
+            }).collect(Collectors.toList());
         }
-        return false;
-    }
-
-    private Boolean isSingleBrace(TerminalNode node) {
-        ParseTree parent = node.getParent();
-        int childCount = parent.getChildCount();
-        if (parent instanceof SysYParser.BlockContext) {
-            if (childCount == 2) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean isInDeclContext(TerminalNode node) {
-        ParserRuleContext ctx = (ParserRuleContext) node.getParent();
-        while (ctx != null) {
-            if (ctx instanceof SysYParser.DeclContext) {
-                return true;
-            }
-            ctx = ctx.getParent();
-        }
-        return false;
+        return list;
     }
 
 
-    private int indentLevel = 0;
 
-
-//    缩进：
-//    初始情况不需要缩进（即缩进级别为0）
-//    每一级缩进使用4个空格
-//    语句块（block）内缩进级别+1
-//    if、else、while等语句下单独一行、不存在花括号的情况也需要缩进+1
-//    但是形如else if (cond) block的情况，else if在同一行，且block缩进保持不变，block内缩进正常+1
-
-    /* if (){
+    @Override
+    public Object visitConstInitVal(SysYParser.ConstInitValContext ctx) {
+        if(ctx.constInitVal().isEmpty()){
+            return visitConstExp(ctx.constExp());
         }
-
-        if ()
-            a = 9;
-
         else {
-
-        }
-
-        else if() {
-        }
-
-        while () {
-        }
-
-        while ()
-            c = 0;
-
-
-     */
-
-    private void printIndentation() {
-
-
-        for (int i = 0; i < indentLevel; i++) {
-            System.out.print("    ");
-            isOut = true;
-        }
-
-    }
-
-
-    public TerminalNode getNextLeafNode(TerminalNode leafNode) {
-        if (leafNode != null) {
-            ParserRuleContext parent = (ParserRuleContext) leafNode.getParent();
-
-            int index = parent.children.indexOf(leafNode);
-
-            while (parent != null) {
-                for (int i = index + 1; i < parent.getChildCount(); i++) {
-                    if (parent.getChild(i) instanceof TerminalNode) {
-                        return (TerminalNode) parent.getChild(i);
-                    } else if (parent.getChild(i).getChildCount() > 0) {
-                        List<ParseTree> children = new ArrayList<>();
-                        for (int childIndex = 0; childIndex < parent.getChild(i).getChildCount(); childIndex++) {
-                            children.add(parent.getChild(i).getChild(childIndex));
-                        }
-
-                        return getLeftmostLeafNode(children);
-                    }
-                }
-                index = parent.parent != null ? parent.getParent().children.indexOf(parent) : -1;
-                parent = parent.getParent();
+            for (SysYParser.ConstInitValContext initVal : ctx.constInitVal()){
+                visitConstInitVal(initVal);
             }
         }
         return null;
     }
 
-    // 获取最左侧的叶子节点
-    private TerminalNode getLeftmostLeafNode(List<ParseTree> nodeList) {
-        for (ParseTree node : nodeList) {
-            if (node instanceof TerminalNode) {
-                return (TerminalNode) node;
-            }
-            if (node.getChildCount() > 0) {
-                ParserRuleContext node1 = (ParserRuleContext) node;
-                return getLeftmostLeafNode(new ArrayList<>(node1.children));
+    @Override
+    public Object visitInitVal(SysYParser.InitValContext ctx) {
+        if(ctx.initVal().isEmpty()){
+            return visitExp(ctx.exp());
+        }
+        else {
+            for (SysYParser.InitValContext initVal : ctx.initVal()){
+                visitInitVal(initVal);
             }
         }
         return null;
     }
 
-    public TerminalNode getPreviousLeafNode(TerminalNode leafNode) {
-        if (leafNode != null) {
-            ParserRuleContext parent = (ParserRuleContext) leafNode.getParent();
+
+    @Override
+    public Object visitConstdef(SysYParser.ConstdefContext ctx) {
+        if(curScope.find(ctx.IDENT().getText())){
+            OutputHelper.printSemanticError(ErrorType.Redefined_variable,ctx.IDENT().getSymbol().getLine()
+                    ,ctx.IDENT().getText());
+            return null;
+        }
+        String varName = ctx.IDENT().getText(); // 获取变量名
+        List<SysYParser.ConstExpContext> dimensions = ctx.constExp(); // 获取维度信息
+        if (dimensions.isEmpty()) {//Int
+            if (ctx.ASSIGN() != null) {
+                if(visitConstInitVal(ctx.constInitVal()) != null){
+                    Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
+                    if(tmp != null && !(tmp instanceof IntType)){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
+                    }//不确定是否在null时候也要return
+                }
+            }
+            curScope.getSymbols().put(varName, IntType.getInt32());
+        }
+        else {//数组
+            if (ctx.ASSIGN() != null) {
+                if(visitConstInitVal(ctx.constInitVal()) != null){
+                    Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
+                    if(tmp != null  && !(tmp instanceof ArrayType)){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
+                    }//不确定是否在null时候也要return
+                }
+            }
+            //List<String> list = dimensions.stream().map(text -> text.getText()).collect(Collectors.toList());
+            curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitVardef(SysYParser.VardefContext ctx) {
+        if(curScope.find(ctx.IDENT().getText())){
+            OutputHelper.printSemanticError(ErrorType.Redefined_variable,ctx.IDENT().getSymbol().getLine()
+                    ,ctx.IDENT().getText());
+            return null;
+        }
+        String varName = ctx.IDENT().getText(); // 获取变量名
+        List<SysYParser.ConstExpContext> dimensions = ctx.constExp(); // 获取维度信息
+        if (dimensions.isEmpty()) {//Int
+            if (ctx.ASSIGN() != null) {
+                if(visitInitVal(ctx.initVal()) != null){
+                    Type tmp = (Type) visitInitVal(ctx.initVal());
+                    if(!(tmp instanceof IntType)){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
+                    }//不确定是否在null时候也要return
+                }
+            }
+            curScope.getSymbols().put(varName, IntType.getInt32());
+        }
+        else {//数组
+            if (ctx.ASSIGN() != null) {
+                if(visitInitVal(ctx.initVal()) != null){
+                    Type tmp = (Type) visitInitVal(ctx.initVal());
+                    if(!(tmp instanceof ArrayType)){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
+                    }//不确定是否在null时候也要return
+                }
+            }
+            //List<String> list = dimensions.stream().map(text -> text.getText()).collect(Collectors.toList());
+            curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
+        }
+        return null;
+    }
 
 
-            int index = parent.children.indexOf(leafNode);
 
+    @Override
+    public Object visitCond(SysYParser.CondContext ctx) {
+        if(ctx.exp() != null){
+            Type tmp = (Type) visitExp(ctx.exp());
+            if(tmp != null && !(tmp instanceof IntType)){
+                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp().getStart().getLine(),
+                        ctx.exp().getText());
+                return new Object();
+            }
+            if(tmp == null){
+                return new Object();
+            }
+            else if(tmp instanceof IntType){
+                return IntType.getInt32();
+            }
+        }
+        else {
+            List<SysYParser.CondContext> cond = ctx.cond();
+            for (int i = 0; i < cond.size(); i++) {
+                if(visitCond(cond.get(i)) == null){
+                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,cond.get(i).getStart().getLine(),
+                            cond.get(i).getStart().getText());
+                    return new Object();
+                }
+            }
+        }
+        return null;
+    }
 
-            while (parent != null && index >= 0) {
-                for (int i = index - 1; i >= 0; i--) {
-                    if (parent.getChild(i) instanceof TerminalNode) {
-                        return (TerminalNode) parent.getChild(i);
-                    } else if (parent.getChild(i).getChildCount() > 0) {
-                        List<ParseTree> children = new ArrayList<>();
-                        for (int j = parent.getChild(i).getChildCount() - 1; j >= 0; j--) {
-                            children.add(parent.getChild(i).getChild(j));
-                        }
-                        TerminalNode rightmostLeaf = getRightmostLeafNode(children);
-                        if (rightmostLeaf != null) {
-                            return rightmostLeaf;
+    @Override
+    public Object visitConstExp(SysYParser.ConstExpContext ctx) {
+        return visitExp(ctx.exp());
+    }
+    @Override
+    public Object visitExp(SysYParser.ExpContext ctx) {
+        if(ctx == null){
+            return null;
+        }
+        else if(ctx.number() != null){
+            return IntType.getInt32();
+        }
+        else if(ctx.lVal() != null){//变量引用
+            return visitLVal(ctx.lVal());
+        }
+        else if(ctx.IDENT() != null){//CallFunc
+            if(curScope.resolve(ctx.IDENT().getText()) == null){
+                OutputHelper.printSemanticError(ErrorType.Undefined_function, ctx.IDENT().getSymbol().getLine(),
+                        ctx.IDENT().getText());
+                return null;
+            }
+            else if(!(curScope.resolve(ctx.IDENT().getText()) instanceof FunctionType)){
+                OutputHelper.printSemanticError(ErrorType.Not_a_function, ctx.IDENT().getSymbol().getLine(),
+                        ctx.IDENT().getText());
+                return null;
+            }
+            else {
+                if(ctx.L_PAREN() == null){
+                    OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.IDENT().getSymbol().getLine(),
+                            ctx.IDENT().getText());
+                    return null;
+                }
+                List<Type> fparams = ((FunctionType)curScope.resolve(ctx.IDENT().getText())).paramsType;
+                if(ctx.funcRParams() == null){
+                    if(fparams == null || fparams.isEmpty()){
+                        return ((FunctionType)curScope.resolve(ctx.IDENT().getText())).retTy;
+                    }
+                    else {
+                        OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
+                    }
+                }else {//注意比对参数
+                    List<SysYParser.ParamContext> rparams = ctx.funcRParams().param();
+                    if(rparams.size() != fparams.size()){
+                        OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
+                    }
+                    for (int i = 0; i < rparams.size(); i++) {
+                        if(visitExp(rparams.get(i).exp()) != null){
+                            Type tmpTy = (Type) visitExp(rparams.get(i).exp());
+                            if(tmpTy.getClass() != fparams.get(i).getClass()){
+                                OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.funcRParams().param(i).getStart().getLine(),
+                                        ctx.funcRParams().param(i).getStart().getText());
+                                return null;
+                            };
                         }
                     }
+                    //列表对比完成
+
                 }
-                if (parent.parent != null) {
-                    index = parent.getParent().children.indexOf(parent);
-                    parent = parent.getParent();
-                } else {
+            }
+        }
+        else if(ctx.exp() != null){
+            if(ctx.R_PAREN() != null){//   (  exp  ) 列表只有一个exp
+                return visitExp(ctx.exp().get(0));
+            }
+            else {
+                List<SysYParser.ExpContext> exps = ctx.exp();
+                for (int i =0 ; i<exps.size();i++){
+                    if(!checkIsInteger(exps.get(i))){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(i).getStart().getLine(),
+                                ctx.exp(i).getStart().getText());
+                        return null;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean checkIsInteger(SysYParser.ExpContext ctx){
+        if(ctx == null){
+            return false;
+        }
+        return visitExp(ctx) instanceof IntType;
+    }
+
+
+    @Override
+    public Object visitStmt(SysYParser.StmtContext ctx) {
+        if(ctx == null){
+            return null;
+        }
+        if(!ctx.stmt().isEmpty()){
+            for (SysYParser.StmtContext stmtContext : ctx.stmt()){
+                visitStmt(stmtContext);
+            }
+        }
+        if(ctx.ASSIGN() != null){
+            Type tp1 = (Type) visitLVal(ctx.lVal());
+            Type tp2 = (Type) visitExp(ctx.exp());
+            if (tp1 != null && tp2 != null && (tp1.getClass() != tp2.getClass())){
+                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.ASSIGN().getSymbol().getLine(),
+                        ctx.ASSIGN().getText());
+                return null;
+            }
+            if(tp2 instanceof ArrayType && tp1 instanceof ArrayType){
+                ArrayType temp1 = (ArrayType) tp1;
+                ArrayType temp2 = (ArrayType) tp2;
+                if(temp1.getDimension() != temp2.getDimension()){
+                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.ASSIGN().getSymbol().getLine(),
+                            ctx.ASSIGN().getText());
                     return null;
                 }
             }
         }
-        return null;
-    }
-
-
-    private TerminalNode getRightmostLeafNode(List<ParseTree> nodeList) {
-        for (int i = nodeList.size() - 1; i >= 0; i--) {
-            ParseTree node = nodeList.get(i);
-            if (node instanceof TerminalNode) {
-                return (TerminalNode) node;
-            }
-            if (node.getChildCount() > 0) {
-                ParserRuleContext node1 = (ParserRuleContext) node;
-                TerminalNode leafNode = getRightmostLeafNode(node1.children);
-                if (leafNode != null) {
-                    return leafNode;
+        else if(ctx.RETURN() != null){
+            if(ctx.exp() == null){
+                if(!(curRetTpye instanceof VoidType)){
+                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_return,ctx.RETURN().getSymbol().getLine(),
+                            ctx.RETURN().getText());
+                    return null;
                 }
-            }
-        }
-        return null;
-    }
-
-
-    private TerminalNode getRightParen(TerminalNode node) {
-        ParserRuleContext parent = (ParserRuleContext) node.getParent();
-        int index = parent.children.indexOf(node);
-        for (int i = index + 1; i < parent.getChildCount(); i++) {
-            if (parent.getChild(i) instanceof TerminalNode) {
-                TerminalNode parentChild = (TerminalNode) parent.getChild(i);
-                if (parentChild.getSymbol().getType() == SysYParser.R_PAREN) {
-                    return parentChild;
-                }
-            }
-        }
-        return null;
-    }
-    public int check(TerminalNode node){
-        int cut=0;
-        while (true){
-            if(!invisible.isEmpty() && invisible.peek().equals(node)){
-                cut ++;
-                invisible.pop();
             }
             else {
-                return cut;
+                Type tmp = (Type) visitExp(ctx.exp());
+                if (tmp != null && tmp.getClass() != curRetTpye.getClass()){
+                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_return,ctx.RETURN().getSymbol().getLine(),
+                            ctx.RETURN().getText());
+                    return null;
+                }
             }
         }
-
-    }
-
-    public void meetLL(TerminalNode node){
-        if (!isSingleBrace(node)) {
-            indentLevel++;
+        else if(ctx.exp() != null){
+            return visitExp(ctx.exp());
         }
-        System.out.println();
-        printIndentation();
-        isOut =true;
-    }
-    public void meetLL(){
-        indentLevel++;
-        System.out.println();
-        printIndentation();
-        isOut =true;
-    }
-
-    public void meetRR(TerminalNode node){
-        TerminalNode nextLeafNodeLeafNode = getNextLeafNode(node);
-        if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE) {
-            indentLevel--;
+        else if(ctx.block() != null){
+            return visitBlock(ctx.block());
         }
-        System.out.println();
-        printIndentation();
-        isOut =true;
-    }
+        else if(ctx.cond() != null){
+            return visitCond(ctx.cond());
+        }
 
-
-    // ) || else
-    public void caozuo(TerminalNode node){
-        ParserRuleContext brother = getBrother(node);
-        invisible.push(getRight(brother));
-        baga.add(node);
+        return null;
     }
 
     @Override
-    public Object visitTerminal(TerminalNode node) {
-        if (node.getText().equals("<EOF>")) {
-            return super.visitTerminal(node);
+    public Object visitLVal(SysYParser.LValContext ctx) {
+        if(curScope.resolve(ctx.IDENT().getText()) == null){
+            OutputHelper.printSemanticError(ErrorType.Undefined_variable,ctx.IDENT().getSymbol().getLine(),
+                    ctx.IDENT().getText());
+            return null;
         }
-        String color = getHilight(node);
-
-        if (node.getSymbol().getType() == SysYParser.L_BRACE) {
-            isOut = true;
-            if (isLeftBraceStandalone(node)) {
-                TerminalNode terminalNode = getPreviousLeafNode(node);
-                TerminalNode lastNode = getNextLeafNode(node);
-                if (terminalNode.getSymbol().getType() != SysYParser.SEMICOLON
-                        && lastNode.getSymbol().getType() != SysYParser.L_BRACE
-                        && terminalNode.getSymbol().getType() != SysYParser.L_BRACE
-                        && terminalNode.getSymbol().getType() != SysYParser.R_BRACE) {
-                    System.out.println();
-                    printIndentation();
-                }
-            } else {
-                if(!isintival(getPreviousLeafNode(node)))
-                    System.out.print(" ");
-            }
-        }
-        if (node.getSymbol().getType() == SysYParser.R_BRACE && !isInDeclContext(node)) {
-            isOut = true;
-            TerminalNode terminalNode = getPreviousLeafNode(node);
-            if (terminalNode.getSymbol().getType() != SysYParser.L_BRACE && terminalNode.getSymbol().getType() != SysYParser.R_BRACE && terminalNode.getSymbol().getType() != SysYParser.SEMICOLON) {
-                System.out.println();
-                printIndentation();
-            }
-
+        else if(curScope.resolve(ctx.IDENT().getText()) instanceof IntType && !ctx.L_BRACKT().isEmpty()){
+            OutputHelper.printSemanticError(ErrorType.Not_an_array,ctx.IDENT().getSymbol().getLine(),
+                    ctx.IDENT().getText());
+            return null;
         }
 
-        ParserRuleContext context = (ParserRuleContext) node.getParent();
-        if (context instanceof SysYParser.FunctypeContext) {
-            if(!isFirst(node)){
-                System.out.println();
-            }
-        }
-
-
-        TerminalNode previousLeafNode = getPreviousLeafNode(node);
-        if (node.getSymbol().getType() == SysYParser.IF
-                && previousLeafNode != null
-                && previousLeafNode.getSymbol().getType() == SysYParser.ELSE) {
-            // do nothing
-        } else {
-
-            System.out.print(fixColor(node, color));
-            isOut = true;
-        }
-
-
-//  ************************************************************************************
-
-
-
-
-
-        if (node.getSymbol().getType() == SysYParser.ELSE) {
-            TerminalNode nodeif = getNextLeafNode(node);
-            if (nodeif != null && nodeif.getSymbol().getType() == SysYParser.IF) {
-                TerminalNode Rparen = getRightParen(nodeif);
-                if (Rparen != null) {
-                    isOut = true;
-                    TerminalNode node1 = getNextLeafNode(Rparen);
-                    if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
-                        caozuo(Rparen);
-                        System.out.print(" " +getHilight(nodeif) + " ");
-                        isPrint = true;
-                    } else {
-                        System.out.print(" " + getHilight(nodeif) + " ");
+        if(curScope.resolve(ctx.IDENT().getText()) instanceof ArrayType){
+            int LbraketSize = ctx.L_BRACKT().size();
+            for (int i = 0; i < ctx.exp().size(); i++) {
+                Object o = visitExp(ctx.exp(i));
+//				if(o == null){
+//					OutputHelper.printSemanticError(ErrorType.);
+//				}
+                // 无需报错，因为先前已经报过
+                if(o != null){
+                    if(o instanceof IntType){
+                        //正确
+                    }
+                    else {//未提及，不确定
+                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
                     }
                 }
-            } else if (nodeif != null && nodeif.getSymbol().getType() != SysYParser.L_BRACE) {
-                caozuo(node);
-                meetLL();
+            }
+            int remain_Dim = ((ArrayType)curScope.resolve(ctx.IDENT().getText())).getDimension() - ctx.L_BRACKT().size();
+            if(remain_Dim < 0){
+                OutputHelper.printSemanticError(ErrorType.Not_an_array,ctx.IDENT().getSymbol().getLine(),
+                        ctx.IDENT().getText());
+                return null;
+            }
+            else if(remain_Dim == 0){
+                return IntType.getInt32();
+            }
+            else {
+                return new ArrayType(remain_Dim);
             }
         }
-
-
-        if (node.getSymbol().getType() == SysYParser.WHILE
-                || ((previousLeafNode == null || (previousLeafNode != null && previousLeafNode.getSymbol().getType() != SysYParser.ELSE))
-                && node.getSymbol().getType() == SysYParser.IF)) {
-            TerminalNode Rparen = getRightParen(node);
-            if (Rparen != null) {
-                TerminalNode node1 = getNextLeafNode(Rparen);
-                if (node1 != null && node1.getSymbol().getType() != SysYParser.L_BRACE) {
-                    caozuo(Rparen);
-
-                }
-            }
+        else if(curScope.resolve(ctx.IDENT().getText()) instanceof IntType){
+            return IntType.getInt32();
+        }
+        else {//FunctionType
+            OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+                    ctx.IDENT().getText());
+            return null;
         }
 
-
-        if (node.getSymbol().getType() == SysYParser.SEMICOLON ||
-                (node.getSymbol().getType() == SysYParser.R_BRACE && !isInDeclContext(node))
-                || (node.getSymbol().getType() == SysYParser.L_BRACE && !isInDeclContext(node))) {
-
-            if (getNextLeafNode(node).getSymbol().getType() == SysYParser.EOF) {
-                return super.visitTerminal(node);
-            }
-//            if (node.getSymbol().getType() == SysYParser.L_BRACE &&
-//                    getNextLeafNode(node).getSymbol().getType() == SysYParser.L_BRACE) {
-////                //do nothing
-//            }
-//            else
-
-            if (node.getSymbol().getType() == SysYParser.L_BRACE) {
-                meetLL(node);
-            }
-            if (node.getSymbol().getType() == SysYParser.R_BRACE) {
-                int cut = check(node);
-                TerminalNode nextLeafNodeLeafNode = getNextLeafNode(node);
-                if (nextLeafNodeLeafNode.getSymbol().getType() == SysYParser.R_BRACE) {
-                    indentLevel--;
-                }
-                while (cut -- > 0){
-                    indentLevel--;
-                }
-                System.out.println();
-                printIndentation();
-                isOut = true;
-
-            }
-            if (node.getSymbol().getType() == SysYParser.SEMICOLON) {
-                int cut = check(node);
-                TerminalNode nextLeafNode = getNextLeafNode(node);
-                ParserRuleContext parent = (ParserRuleContext) node.getParent();
-                if (nextLeafNode != null && (nextLeafNode.getSymbol().getType() == SysYParser.R_BRACE )) {
-                    indentLevel--;
-                }
-                while (cut -- > 0){
-                    indentLevel--;
-                }
-
-                System.out.println();
-                printIndentation();
-                isOut =true;
-            }
-
-
-        }
-
-        if (node.getSymbol().getType() == SysYParser.R_PAREN && baga.contains(node)) {
-
-                meetLL();
-
-
-        }
-
-
-        return super.visitTerminal(node);
-    }
-
-    private String fixColor(TerminalNode node, String color) {
-        String text = node.getText();
-
-
-        ParserRuleContext parent = (ParserRuleContext) node.getParent();
-
-        if (parent instanceof SysYParser.FunctypeContext) {
-            if (!isintival(getNextLeafNode(node)))
-                color += " ";
-        } else if (text.equals("const") || text.equals("int") || text.equals("void") || text.equals("if")
-                || text.equals("else") || text.equals("while")) {
-            if (text.equals("else")) {
-                TerminalNode nodeif = getNextLeafNode(node);
-                if (nodeif.getSymbol().getType() == SysYParser.L_BRACE) {
-                    // do nothing
-                }
-            } else {
-                if (!isintival(getNextLeafNode(node)))
-                    color += " ";
-            }
-
-
-        }
-        if (text.equals("return")) {
-            TerminalNode nextLeafNode = getNextLeafNode(node);
-            if (nextLeafNode != null && nextLeafNode.getSymbol().getType() == SysYParser.SEMICOLON) {
-                // do nothing
-            } else {
-                if (!isintival(getNextLeafNode(node)))
-                    color += " ";
-            }
-        }
-
-        if (text.equals("*") || text.equals("/")
-                || text.equals("%") || text.equals("=") || text.equals("==")
-                || text.equals("!=") || text.equals("<") || text.equals(">")
-                || text.equals("<=") || text.equals(">=") || text.equals("&&") || text.equals("||")) {
-            if (!isintival(getNextLeafNode(node))){
-                color = " " + color +" ";
-            }
-            else
-                color = " " + color ;
-        }
-        if (text.equals("+") || text.equals("-") || text.equals("!")) {
-            ParserRuleContext parent1 = (ParserRuleContext) node.getParent();
-            if (parent1 instanceof SysYParser.UnaryOpContext) {
-                //do nothing
-            } else {
-                if (!isintival(getNextLeafNode(node))){
-                    color = " " + color+" ";
-                }
-                else
-                    color = " " + color ;
-            }
-
-        }
-        if (text.equals(",")) {
-            if (!isintival(getNextLeafNode(node)))
-                color += " ";
-        }
-
-        return color;
-    }
-    private boolean isintival(TerminalNode node){
-        if(node.getSymbol().getType() != SysYParser.L_BRACE){
-            return false;
-        }
-        ParserRuleContext parent = (ParserRuleContext) node.getParent();
-        if(parent instanceof SysYParser.InitValContext || parent instanceof SysYParser.ConstInitValContext){
-            return true;
-        }
-        return false;
-    }
-
-    private boolean isFirst(TerminalNode node){
-        ParserRuleContext parent = (ParserRuleContext) node.getParent();
-        if(parent instanceof SysYParser.FunctypeContext){
-            ParserRuleContext parent1 = (ParserRuleContext)parent.getParent();
-            if(parent1 instanceof SysYParser.FuncDefContext){
-                ParserRuleContext parent2 = (ParserRuleContext)parent1.getParent();
-                if(parent2 instanceof SysYParser.CompUnitContext && parent2.children.indexOf(parent1) == 0){
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
 
-    private String getHilight(TerminalNode node) {
-        String color = "";
-        Vocabulary vocabulary = SysYParser.VOCABULARY;
-        String currentContext = help(node);
-        String globalcurrentContext = globalhelp(node);
-        int type = node.getSymbol().getType();
+//		@Test
+//	public void test(){
+//			Type A = new ArrayType(1);
+//			Type A1 = new ArrayType(10);
+//			Type B = IntType.getInt32();
+//			System.out.println(A.getClass() == A1.getClass());
+//
+//			Object C = null;
+//			A = (Type) C;
+//			System.out.println(A);
+//		}
 
-        ParserRuleContext context = (ParserRuleContext) node.getParent();
-        if (node.getText().equals("{") || node.getText().equals("(") || node.getText().equals("[")) {
-            color = (color(rainbow[braket.size() % 6], node.getText(), isUnderlined(globalcurrentContext)));
-            braket.push(node.getText());
-        } else if (node.getText().equals("}") || node.getText().equals(")") || node.getText().equals("]")) {
-            braket.pop();
-            color = (color(rainbow[braket.size() % 6], node.getText(), isUnderlined(globalcurrentContext)));
-        } else if (BrightCyan.contains(node.getText())) {
-            color = (color(SGR_Name.LightCyan, node.getText(), isUnderlined(globalcurrentContext)));
-        } else if (BrightRed.contains(node.getText())) {
-            color = (color(SGR_Name.LightRed, node.getText(), isUnderlined(globalcurrentContext)));
-        } else if (vocabulary.getSymbolicName(type).equals("INTEGER_CONST")) {
-            color = (color(SGR_Name.Magenta, node.getText(), isUnderlined(globalcurrentContext)));
-        } else if (vocabulary.getSymbolicName(type).equals("IDENT") && (context instanceof SysYParser.ExpContext || context instanceof SysYParser.FuncDefContext)) {
-            color = (color(SGR_Name.LightYellow, node.getText(), isUnderlined(globalcurrentContext)));
-        } else if ("stmt".equals(currentContext)) {
-            color = (color(SGR_Name.White, node.getText(), isUnderlined(globalcurrentContext)));
-        } else if ("decl".equals(currentContext)) {
-            color = (color(SGR_Name.LightMagenta, node.getText(), isUnderlined(globalcurrentContext)));
-        } else {
-            color = (color(node.getText(), isUnderlined(globalcurrentContext)));
-        }
-        return color;
-    }
 }
 
 
