@@ -37,7 +37,7 @@ public class Main {
         visitor.visit(tree);
 
         if (!OutputHelper.isFalse){
-            System.err.println("No semantic errors in the program!");
+            System.err.print("No semantic errors in the program!");
         }
 
     }
