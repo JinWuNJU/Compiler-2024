@@ -1,4 +1,4 @@
-int a(){
+int a(int m[3],int n){
     return 1;
 }
 
