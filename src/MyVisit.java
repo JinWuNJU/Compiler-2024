@@ -330,19 +330,15 @@ public class MyVisit extends SysYParserBaseVisitor {
                 return visitExp(ctx.exp().get(0));
             }
             else {
-                List<SysYParser.ExpContext> exps = ctx.exp();
-                if(exps.size() == 1){
-                    if(!checkIsInteger(exps.get(0))){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(0).getStart().getLine(),
-                                ctx.exp(0).getStart().getText());
-                        return null;
+                    List<SysYParser.ExpContext> exps = ctx.exp();
+                    for (int i =0 ; i<exps.size();i++){
+                        if(!checkIsInteger(exps.get(i))){
+                            OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(i).getStart().getLine(),
+                                    ctx.exp(i).getStart().getText());
+                            return null;
+                        }
                     }
-                }
-                else {
-                    visitExp(exps.get(1));
-                }
-                return IntType.getInt32();
-
+                    return IntType.getInt32();
             }
         }
     }
