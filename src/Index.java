@@ -2,23 +2,23 @@ import java.util.Objects;
 
 public class Index {
     int intValue;
-    String stringValue;
+    int line;
 
-    public Index(int intValue, String stringValue) {
+    public Index(int intValue, int line) {
         this.intValue = intValue;
-        this.stringValue = stringValue;
+        this.line = line;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Index index = (Index) o;
+        return intValue == index.intValue && line == index.line;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(intValue, stringValue);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Index index = (Index) obj;
-        return intValue == index.intValue && Objects.equals(stringValue, index.stringValue);
+        return Objects.hash(intValue, line);
     }
 }

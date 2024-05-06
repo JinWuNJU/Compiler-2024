@@ -8,14 +8,20 @@ public class OutputHelper {
 
     public static void printSemanticError(ErrorType errorType, int line, String text) {
         isFalse = true;
-
+        if(errorType.getType() == 6){
+            if(!checkCut(6,line)){
+                System.err.println("Error type " + errorType.getType() + " at Line " + line + ":[" + text + ":" + errorType + "].");
+            }
+        }
+        else{
             System.err.println("Error type " + errorType.getType() + " at Line " + line + ":[" + text + ":" + errorType + "].");
+        }
 
         //Error type [errorTypeNo] at Line [lineNo]:[errorMessage]
     }
 
-    private static boolean checkCut(int line, String text) {
-        Index index = new Index(line, text);
+    private static boolean checkCut(int value, int line) {
+        Index index = new Index(value,line);
         if (set.contains(index)) {
             return true;
         }
