@@ -330,25 +330,19 @@ public class MyVisit extends SysYParserBaseVisitor {
                 return visitExp(ctx.exp().get(0));
             }
             else {
-                    List<SysYParser.ExpContext> exps = ctx.exp();
-                    for (int i =0 ; i<exps.size();i++){
-                        if(!checkIsInteger(exps.get(i))){
-                            OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(i).getStart().getLine(),
-                                    ctx.exp(i).getStart().getText());
-                            return null;
-                        }
+                List<SysYParser.ExpContext> exps = ctx.exp();
+                for (int i =exps.size()-1 ; i>=0;i--){
+                    if(visitExp(exps.get(i)) != null && !(visitExp(exps.get(i)) instanceof IntType)){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(i).getStart().getLine(),
+                                ctx.exp(i).getStart().getText());
+                        return null;
                     }
-                    return null;
+                }
+                return null;
             }
         }
     }
 
-    private boolean checkIsInteger(SysYParser.ExpContext ctx){
-        if(ctx == null){
-            return false;//为了只报一次错误
-        }
-        return visitExp(ctx) instanceof IntType;
-    }
 
 
     @Override
