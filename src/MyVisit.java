@@ -457,9 +457,11 @@ public class MyVisit extends SysYParserBaseVisitor {
                         ctx.IDENT().getText());
                 return null;
             }
-            OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
-                    ctx.IDENT().getText());
-            return null;
+            else {
+                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
+                        ctx.IDENT().getText());
+                return null;
+            }
         }
 
     }
