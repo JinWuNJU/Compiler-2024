@@ -344,8 +344,8 @@ public class MyVisit extends SysYParserBaseVisitor {
     }
 
     private boolean checkIsInteger(SysYParser.ExpContext ctx){
-        if(visitExp(ctx) == null){
-            return true;//为了只报一次错误
+        if(ctx == null){
+            return false;//为了只报一次错误
         }
         return visitExp(ctx) instanceof IntType;
     }
