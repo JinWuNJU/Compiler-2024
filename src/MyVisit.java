@@ -170,8 +170,9 @@ public class MyVisit extends SysYParserBaseVisitor {
         List<SysYParser.ConstExpContext> dimensions = ctx.constExp(); // 获取维度信息
         if (dimensions.isEmpty()) {//Int
             if (ctx.ASSIGN() != null) {
-                if(visitConstInitVal(ctx.constInitVal()) != null){
-                    Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
+                Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
+                if(tmp != null){
+
                     if(tmp != null && !(tmp instanceof IntType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
@@ -183,8 +184,9 @@ public class MyVisit extends SysYParserBaseVisitor {
         }
         else {//数组
             if (ctx.ASSIGN() != null) {
-                if(visitConstInitVal(ctx.constInitVal()) != null){
-                    Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
+                Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
+                if(tmp != null){
+
                     if(tmp != null  && !(tmp instanceof ArrayType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
@@ -209,8 +211,9 @@ public class MyVisit extends SysYParserBaseVisitor {
         List<SysYParser.ConstExpContext> dimensions = ctx.constExp(); // 获取维度信息
         if (dimensions.isEmpty()) {//Int
             if (ctx.ASSIGN() != null) {
-                if(visitInitVal(ctx.initVal()) != null){
-                    Type tmp = (Type) visitInitVal(ctx.initVal());
+                Type tmp = (Type) visitInitVal(ctx.initVal());
+                if(tmp != null){
+
                     if(!(tmp instanceof IntType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
@@ -222,8 +225,9 @@ public class MyVisit extends SysYParserBaseVisitor {
         }
         else {//数组
             if (ctx.ASSIGN() != null) {
-                if(visitInitVal(ctx.initVal()) != null){
-                    Type tmp = (Type) visitInitVal(ctx.initVal());
+                Type tmp = (Type) visitInitVal(ctx.initVal());
+                if(tmp != null){
+
                     if(!(tmp instanceof ArrayType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
@@ -311,8 +315,9 @@ public class MyVisit extends SysYParserBaseVisitor {
                         return null;
                     }
                     for (int i = 0; i < rparams.size(); i++) {
-                        if(visitExp(rparams.get(i).exp()) != null){
-                            Type tmpTy = (Type) visitExp(rparams.get(i).exp());
+                        Type tmpTy = (Type) visitExp(rparams.get(i).exp());
+                        if(tmpTy != null){
+
                             if(tmpTy.getClass() != fparams.get(i).getClass()){
                                 OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.funcRParams().param(i).getStart().getLine(),
                                         ctx.funcRParams().param(i).getStart().getText());
@@ -332,7 +337,8 @@ public class MyVisit extends SysYParserBaseVisitor {
             else {
                 List<SysYParser.ExpContext> exps = ctx.exp();
                 for (int i =exps.size()-1 ; i>=0;i--){
-                    if(visitExp(exps.get(i)) != null && !(visitExp(exps.get(i)) instanceof IntType)){
+                    Type tmp = (Type)visitExp(exps.get(i));
+                    if(tmp != null && !(tmp instanceof IntType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(i).getStart().getLine(),
                                 ctx.exp(i).getStart().getText());
                         return null;
@@ -419,7 +425,7 @@ public class MyVisit extends SysYParserBaseVisitor {
         if(curScope.resolve(ctx.IDENT().getText()) instanceof ArrayType){
             int LbraketSize = ctx.L_BRACKT().size();
             for (int i = 0; i < ctx.exp().size(); i++) {
-                Object o = visitExp(ctx.exp(i));
+                Type o = (Type)visitExp(ctx.exp(i));
 //				if(o == null){
 //					OutputHelper.printSemanticError(ErrorType.);
 //				}
@@ -428,11 +434,11 @@ public class MyVisit extends SysYParserBaseVisitor {
                     if(o instanceof IntType){
                         //正确
                     }
-//                    else {//未提及，不确定
-//                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
-//                                ctx.IDENT().getText());
-//                        return null;
-//                    }
+                    else {//未提及，不确定
+                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
+                    }
                 }
             }
             int remain_Dim = ((ArrayType)curScope.resolve(ctx.IDENT().getText())).getDimension() - ctx.L_BRACKT().size();
