@@ -429,9 +429,9 @@ public class MyVisit extends SysYParserBaseVisitor {
                         //正确
                     }
                     else {//未提及，不确定
-//                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
-//                                ctx.IDENT().getText());
-//                        return null;
+                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+                                ctx.IDENT().getText());
+                        return null;
                     }
                 }
             }
@@ -452,7 +452,12 @@ public class MyVisit extends SysYParserBaseVisitor {
             return IntType.getInt32();
         }
         else {//FunctionType
-            OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+            if(ctx.getParent() instanceof SysYParser.StmtContext){
+                OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+                        ctx.IDENT().getText());
+                return null;
+            }
+            OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                     ctx.IDENT().getText());
             return null;
         }
