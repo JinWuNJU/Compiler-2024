@@ -339,11 +339,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     }
                 }
                 else {
-                    if(!checkIsInteger(exps.get(0)) &&!checkIsInteger(exps.get(1))){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(0).getStart().getLine(),
-                                ctx.exp(0).getStart().getText());
-                        return null;
-                    }
+                    visitExp(exps.get(1));
                 }
                 return IntType.getInt32();
 
