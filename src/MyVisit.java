@@ -176,6 +176,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     if(tmp != null && !(tmp instanceof IntType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
+                        curScope.getSymbols().put(varName, IntType.getInt32());
                         return null;
                     }//不确定是否在null时候也要return
                 }
@@ -190,6 +191,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     if(tmp != null  && !(tmp instanceof ArrayType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
+                        curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
                         return null;
                     }//不确定是否在null时候也要return
                 }
@@ -217,6 +219,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     if(!(tmp instanceof IntType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
+                        curScope.getSymbols().put(varName, IntType.getInt32());
                         return null;
                     }//不确定是否在null时候也要return
                 }
@@ -231,6 +234,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                     if(!(tmp instanceof ArrayType)){
                         OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
                                 ctx.IDENT().getText());
+                        curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
                         return null;
                     }//不确定是否在null时候也要return
                 }
@@ -469,17 +473,6 @@ public class MyVisit extends SysYParserBaseVisitor {
         }
 
     }
-
-
-//		@Test
-//	public void test(){
-//			Type A = new ArrayType(1);
-//			Type A1 = new ArrayType(10);
-//			Type B = IntType.getInt32();
-//			System.out.println(A.getClass() == A1.getClass());
-//
-//			System.out.println(A instanceof Object);
-//		}
 
 }
 
