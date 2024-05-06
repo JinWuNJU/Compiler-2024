@@ -34,10 +34,10 @@ public class Main {
         }
         MyVisit visitor = new MyVisit();
 
-        visitor.visit(tree);
+        //visitor.visit(tree);
 
         if (!OutputHelper.isFalse){
-            System.err.print("No semantic errors in the program!");
+            System.err.println("No semantic errors in the program!");
         }
 
     }

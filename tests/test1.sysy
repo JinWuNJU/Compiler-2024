@@ -1,4 +1,4 @@
-int a(int m[3],int n){
+int a(int m[],int n){
     return 1;
 }
 
