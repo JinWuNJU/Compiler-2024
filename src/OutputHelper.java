@@ -8,9 +8,9 @@ public class OutputHelper {
 
     public static void printSemanticError(ErrorType errorType, int line, String text) {
         isFalse = true;
-        if (!checkCut(line, text)) {
+
             System.err.println("Error type " + errorType.getType() + " at Line " + line + ":[" + text + ":" + errorType + "].");
-        }
+
         //Error type [errorTypeNo] at Line [lineNo]:[errorMessage]
     }
 

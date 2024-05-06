@@ -1,3 +1,4 @@
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +22,7 @@ public class MyVisit extends SysYParserBaseVisitor {
     }
 
     @Override
-    public Void visitFuncDef(SysYParser.FuncDefContext ctx) {
+    public Object visitFuncDef(SysYParser.FuncDefContext ctx) {
         String funcName = ctx.IDENT().getText();
         Type retType;
         if (curScope.find(funcName)) { // curScope为当前的作用域
@@ -94,10 +95,10 @@ public class MyVisit extends SysYParserBaseVisitor {
         Map<String,Type>map = new HashMap<>();
         List<SysYParser.FuncFParamContext> funcFParams = ctx.funcFParam();
         for (SysYParser.FuncFParamContext param : funcFParams) {
-            if(curScope.find(param.getText())){//是否在本作用域中定义过变量
+            if(map.containsKey(param.IDENT().getText())){//是否在本作用域中定义过变量
                 OutputHelper.printSemanticError(ErrorType.Redefined_variable,param.IDENT().getSymbol().getLine(),
                         param.IDENT().getText());
-                return map;
+                continue;
             }
             if(param != null && !param.L_BRACKT().isEmpty()){//默认1维数组为1(函数形参)
                 map.put(param.IDENT().getText(),new ArrayType(1));
@@ -194,7 +195,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             //List<String> list = dimensions.stream().map(text -> text.getText()).collect(Collectors.toList());
             curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
         }
-        return null;
+        return new Object();
     }
 
     @Override
@@ -233,7 +234,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             //List<String> list = dimensions.stream().map(text -> text.getText()).collect(Collectors.toList());
             curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
         }
-        return null;
+        return new Object();
     }
 
 
@@ -245,10 +246,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             if(tmp != null && !(tmp instanceof IntType)){
                 OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp().getStart().getLine(),
                         ctx.exp().getText());
-                return new Object();
-            }
-            if(tmp == null){
-                return new Object();
+                return null;
             }
             else if(tmp instanceof IntType){
                 return IntType.getInt32();
@@ -257,14 +255,10 @@ public class MyVisit extends SysYParserBaseVisitor {
         else {
             List<SysYParser.CondContext> cond = ctx.cond();
             for (int i = 0; i < cond.size(); i++) {
-                if(visitCond(cond.get(i)) == null){
-                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,cond.get(i).getStart().getLine(),
-                            cond.get(i).getStart().getText());
-                    return new Object();
-                }
+                visitCond(cond.get(i));
             }
         }
-        return null;
+        return new Object();
     }
 
     @Override
@@ -274,7 +268,7 @@ public class MyVisit extends SysYParserBaseVisitor {
     @Override
     public Object visitExp(SysYParser.ExpContext ctx) {
         if(ctx == null){
-            return null;
+            return new Object();
         }
         else if(ctx.number() != null){
             return IntType.getInt32();
@@ -323,35 +317,43 @@ public class MyVisit extends SysYParserBaseVisitor {
                                 OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.funcRParams().param(i).getStart().getLine(),
                                         ctx.funcRParams().param(i).getStart().getText());
                                 return null;
-                            };
+                            }
                         }
                     }
                     //列表对比完成
-
+                    return ((FunctionType)curScope.resolve(ctx.IDENT().getText())).retTy;
                 }
             }
         }
-        else if(ctx.exp() != null){
+        else{
             if(ctx.R_PAREN() != null){//   (  exp  ) 列表只有一个exp
                 return visitExp(ctx.exp().get(0));
             }
             else {
                 List<SysYParser.ExpContext> exps = ctx.exp();
-                for (int i =0 ; i<exps.size();i++){
-                    if(!checkIsInteger(exps.get(i))){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(i).getStart().getLine(),
-                                ctx.exp(i).getStart().getText());
+                if(exps.size() == 1){
+                    if(!checkIsInteger(exps.get(0))){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(0).getStart().getLine(),
+                                ctx.exp(0).getStart().getText());
                         return null;
                     }
                 }
+                else {
+                    if(!checkIsInteger(exps.get(0)) &&!checkIsInteger(exps.get(1))){
+                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(0).getStart().getLine(),
+                                ctx.exp(0).getStart().getText());
+                        return null;
+                    }
+                }
+                return IntType.getInt32();
+
             }
         }
-        return null;
     }
 
     private boolean checkIsInteger(SysYParser.ExpContext ctx){
-        if(ctx == null){
-            return false;
+        if(visitExp(ctx) == null){
+            return true;//为了只报一次错误
         }
         return visitExp(ctx) instanceof IntType;
     }
@@ -386,7 +388,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             }
         }
         else if(ctx.RETURN() != null){
-            if(ctx.exp() == null){
+            if(ctx.exp() == null){// 直接return;
                 if(!(curRetTpye instanceof VoidType)){
                     OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_return,ctx.RETURN().getSymbol().getLine(),
                             ctx.RETURN().getText());
@@ -412,7 +414,7 @@ public class MyVisit extends SysYParserBaseVisitor {
             return visitCond(ctx.cond());
         }
 
-        return null;
+        return new Object();
     }
 
     @Override
@@ -479,9 +481,7 @@ public class MyVisit extends SysYParserBaseVisitor {
 //			Type B = IntType.getInt32();
 //			System.out.println(A.getClass() == A1.getClass());
 //
-//			Object C = null;
-//			A = (Type) C;
-//			System.out.println(A);
+//			System.out.println(A instanceof Object);
 //		}
 
 }
