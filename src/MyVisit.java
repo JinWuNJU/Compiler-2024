@@ -338,7 +338,7 @@ public class MyVisit extends SysYParserBaseVisitor {
                         return null;
                     }
                 }
-                return null;
+                return IntType.getInt32();
             }
         }
     }
