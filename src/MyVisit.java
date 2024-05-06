@@ -428,11 +428,11 @@ public class MyVisit extends SysYParserBaseVisitor {
                     if(o instanceof IntType){
                         //正确
                     }
-                    else {//未提及，不确定
-                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        return null;
-                    }
+//                    else {//未提及，不确定
+//                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
+//                                ctx.IDENT().getText());
+//                        return null;
+//                    }
                 }
             }
             int remain_Dim = ((ArrayType)curScope.resolve(ctx.IDENT().getText())).getDimension() - ctx.L_BRACKT().size();
