@@ -1,9 +1,7 @@
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class MyVisit extends SysYParserBaseVisitor {
 
@@ -112,20 +110,22 @@ public class MyVisit extends SysYParserBaseVisitor {
     @Override
     public List<Type> visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
         List<Type> list = new ArrayList<>();
+        Map<String,Type>map = new HashMap<>();
         if(ctx == null){
             return list;
         }
         List<SysYParser.FuncFParamContext> funcFParams = ctx.funcFParam();
-        if (funcFParams != null) {
-            list = funcFParams.stream().map(param ->
-            {
-                if(param != null && !param.L_BRACKT().isEmpty()){//默认1维数组为空list
-                    return new ArrayType(1);
-                }
-                else {
-                    return IntType.getInt32();
-                }
-            }).collect(Collectors.toList());
+        for (SysYParser.FuncFParamContext param : funcFParams){
+            if(map.containsKey(param.IDENT().getText())){
+                continue;
+            }
+            if(!param.L_BRACKT().isEmpty()){
+                map.put(param.IDENT().getText(),new ArrayType(1));
+                list.add(new ArrayType(1));
+            }else {
+                map.put(param.IDENT().getText(),IntType.getInt32());
+                list.add(IntType.getInt32());
+            }
         }
         return list;
     }
@@ -420,7 +420,8 @@ public class MyVisit extends SysYParserBaseVisitor {
                     ctx.IDENT().getText());
             return null;
         }
-        else if(curScope.resolve(ctx.IDENT().getText()) instanceof IntType && !ctx.L_BRACKT().isEmpty()){
+        else if((curScope.resolve(ctx.IDENT().getText()) instanceof IntType ||
+                curScope.resolve(ctx.IDENT().getText()) instanceof FunctionType) && !ctx.L_BRACKT().isEmpty()){
             OutputHelper.printSemanticError(ErrorType.Not_an_array,ctx.IDENT().getSymbol().getLine(),
                     ctx.IDENT().getText());
             return null;
