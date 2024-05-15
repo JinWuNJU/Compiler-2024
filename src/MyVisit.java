@@ -36,9 +36,6 @@ public class MyVisit extends SysYParserBaseVisitor<LLVMValueRef> {
 
     }
 
-
-
-
     @Override
     public LLVMValueRef visitConstdecl(SysYParser.ConstdeclContext ctx) {
         for (int i = 0; i < ctx.constdef().size(); i++) {
