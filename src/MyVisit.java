@@ -1,480 +1,215 @@
-import java.util.ArrayList;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.bytedeco.llvm.LLVM.*;
+
+import static org.bytedeco.llvm.global.LLVM.*;
+
+import org.bytedeco.javacpp.Pointer;
+import org.bytedeco.javacpp.PointerPointer;
+
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-public class MyVisit extends SysYParserBaseVisitor {
 
-    Scope globalScope = null;
-    Scope curScope = null;
+public class MyVisit extends SysYParserBaseVisitor<LLVMValueRef> {
 
-    Type curRetTpye = null;
+    //创建module
+    LLVMModuleRef module = LLVMModuleCreateWithName("module");
+
+    //初始化IRBuilder，后续将使用这个builder去生成LLVM IR
+    LLVMBuilderRef builder = LLVMCreateBuilder();
+
+    //考虑到我们的语言中仅存在int一个基本类型，可以通过下面的语句为LLVM的int型重命名方便以后使用
+    LLVMTypeRef i32Type = LLVMInt32Type();
+
+    LLVMValueRef zero = LLVMConstInt(i32Type, 0, /* signExtend */ 0);
+    //llvmScope curScope;
+
+    Map<String,Integer>map = new HashMap<>();
+
+    public MyVisit() {
+        LLVMInitializeCore(LLVMGetGlobalPassRegistry());
+        LLVMLinkInMCJIT();
+        LLVMInitializeNativeAsmPrinter();
+        LLVMInitializeNativeAsmParser();
+        LLVMInitializeNativeTarget();
+
+
+    }
+
+
 
 
     @Override
-    public Object visitProgram(SysYParser.ProgramContext ctx) {
-        globalScope = new GlobalScope(null);
-        curScope = globalScope;
-
-        return super.visitProgram(ctx);
-    }
-
-    @Override
-    public Object visitFuncDef(SysYParser.FuncDefContext ctx) {
-        String funcName = ctx.IDENT().getText();
-        Type retType;
-        if (curScope.find(funcName)) { // curScope为当前的作用域
-            OutputHelper.printSemanticError(ErrorType.Redefinde_function, ctx.IDENT().getSymbol().getLine(),
-                    ctx.IDENT().getText());
-            return null;
-
-        }
-        String type_Str = ctx.getChild(0).getText();
-        if ("int".equals(type_Str)) {
-            retType = IntType.getInt32();
-        }
-        else {
-            retType = VoidType.getVoidType();
-        }
-
-        List<Type> fParams_Type = visitFuncFParams(ctx.funcFParams());//null返回空list
-        curScope.getSymbols().put(funcName, new FunctionType(retType, fParams_Type));
-        curRetTpye = retType;
-        if(fParams_Type.isEmpty()){//空参
-            visitBlock(ctx.block());
-        }
-        else {//将新的参数加入新的scope
-            visitBlock(ctx.block(),makeFParams(ctx.funcFParams()));
-        }
-
-        return null;
-    }
-
-
-    public Object visitBlock(SysYParser.BlockContext ctx, Map<String,Type>fParams) {
-        LocalScope localScope = new LocalScope(curScope);
-        curScope = localScope;
-        curScope.getSymbols().putAll(fParams);
-        ctx.blockItem().forEach(this::visit); // 依次visit block中的节点
-        //切换回父级作用域
-        curScope = curScope.getEnclosingScope();
-        return null;
-    }
-
-
-    public Object visitBlock(SysYParser.BlockContext ctx) {
-        LocalScope localScope = new LocalScope(curScope);
-        curScope = localScope;
-        ctx.blockItem().forEach(this::visit); // 依次visit block中的节点
-        //切换回父级作用域
-        curScope = curScope.getEnclosingScope();
-
-        return null;
-    }
-
-    @Override
-    public Object visitConstdecl(SysYParser.ConstdeclContext ctx) {
-        for (int i = 0; i < ctx.constdef().size(); i ++) {
+    public LLVMValueRef visitConstdecl(SysYParser.ConstdeclContext ctx) {
+        for (int i = 0; i < ctx.constdef().size(); i++) {
             visit(ctx.constdef(i)); // 依次visit def，即依次visit c=4 和 d=5
         }
         return null;
     }
 
     @Override
-    public Object visitVardecl(SysYParser.VardeclContext ctx) {
-        for (int i = 0; i < ctx.vardef().size(); i ++) {
+    public LLVMValueRef visitVardecl(SysYParser.VardeclContext ctx) {
+        for (int i = 0; i < ctx.vardef().size(); i++) {
             visit(ctx.vardef(i)); // 依次visit def，即依次visit c=4 和 d=5
         }
         return null;
     }
 
-
-    private Map<String,Type>makeFParams(SysYParser.FuncFParamsContext ctx){
-        Map<String,Type>map = new HashMap<>();
-        List<SysYParser.FuncFParamContext> funcFParams = ctx.funcFParam();
-        for (SysYParser.FuncFParamContext param : funcFParams) {
-            if(map.containsKey(param.IDENT().getText())){//是否在本作用域中定义过变量
-                OutputHelper.printSemanticError(ErrorType.Redefined_variable,param.IDENT().getSymbol().getLine(),
-                        param.IDENT().getText());
-                continue;
-            }
-            if(param != null && !param.L_BRACKT().isEmpty()){//默认1维数组为1(函数形参)
-                map.put(param.IDENT().getText(),new ArrayType(1));
+    @Override
+    public LLVMValueRef visitVardef(SysYParser.VardefContext ctx) {
+        //System.out.println(isGlobalVar(ctx));
+        if (isGlobalVar(ctx)) {
+            if(ctx.ASSIGN() == null){
+                //创建名为globalVar的全局变量
+                LLVMValueRef globalVar = LLVMAddGlobal(module, i32Type, /*globalVarName:String*/ctx.IDENT().getText());
+                //为全局变量设置初始化器
+                LLVMSetInitializer(globalVar, /* constantVal:LLVMValueRef*/zero);
+                map.put(ctx.IDENT().getText(),0);
             }
             else {
-                map.put(param.IDENT().getText(),IntType.getInt32());
+                LLVMValueRef tmp = LLVMConstInt(i32Type, getExpValue(ctx.initVal().exp()), /* signExtend */ 0);
+                LLVMValueRef globalVar = LLVMAddGlobal(module, i32Type, /*globalVarName:String*/ctx.IDENT().getText());
+                LLVMSetInitializer(globalVar, /* constantVal:LLVMValueRef*/tmp);
+                map.put(ctx.IDENT().getText(),getExpValue(ctx.initVal().exp()));
             }
-        }
-        return map;
-    }
-    @Override
-    public List<Type> visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
-        List<Type> list = new ArrayList<>();
-        Map<String,Type>map = new HashMap<>();
-        if(ctx == null){
-            return list;
-        }
-        List<SysYParser.FuncFParamContext> funcFParams = ctx.funcFParam();
-        for (SysYParser.FuncFParamContext param : funcFParams){
-            if(map.containsKey(param.IDENT().getText())){
-                continue;
+        } else {
+            if(ctx.ASSIGN() != null){
+                //int型变量
+                //申请一块能存放int型的内存
+                LLVMValueRef pointer = LLVMBuildAlloca(builder, i32Type, /*pointerName:String*/ctx.IDENT().getText());
+                LLVMValueRef tmp = LLVMConstInt(i32Type, getExpValue(ctx.initVal().exp()), /* signExtend */ 0);
+                //将数值存入该内存
+                LLVMBuildStore(builder,tmp , pointer);
+                //从内存中将值取出
+                LLVMValueRef value = LLVMBuildLoad(builder, pointer, /*varName:String*/ctx.IDENT().getText() + "1");
+                map.put(ctx.IDENT().getText(),getExpValue(ctx.initVal().exp()));
             }
-            if(!param.L_BRACKT().isEmpty()){
-                map.put(param.IDENT().getText(),new ArrayType(1));
-                list.add(new ArrayType(1));
-            }else {
-                map.put(param.IDENT().getText(),IntType.getInt32());
-                list.add(IntType.getInt32());
-            }
-        }
-        return list;
-    }
-
-
-
-    @Override
-    public Object visitConstInitVal(SysYParser.ConstInitValContext ctx) {
-        if(ctx.constInitVal().isEmpty()){
-            return visitConstExp(ctx.constExp());
-        }
-        else {
-            for (SysYParser.ConstInitValContext initVal : ctx.constInitVal()){
-                visitConstInitVal(initVal);
+            else {
+                LLVMValueRef pointer = LLVMBuildAlloca(builder, i32Type, /*pointerName:String*/ctx.IDENT().getText());
+                LLVMBuildStore(builder,zero , pointer);
+                LLVMValueRef value = LLVMBuildLoad(builder, pointer, /*varName:String*/ctx.IDENT().getText() + "1");
+                map.put(ctx.IDENT().getText(),0);
             }
         }
         return null;
     }
 
     @Override
-    public Object visitInitVal(SysYParser.InitValContext ctx) {
-        if(ctx.initVal().isEmpty()){
-            return visitExp(ctx.exp());
+    public LLVMValueRef visitConstdef(SysYParser.ConstdefContext ctx) {
+        if (isGlobalVar(ctx)) {
+            LLVMValueRef tmp = LLVMConstInt(i32Type, getExpValue(ctx.constInitVal().constExp().exp()), /* signExtend */ 0);
+            LLVMValueRef globalVar = LLVMAddGlobal(module, i32Type, /*globalVarName:String*/ctx.IDENT().getText());
+            LLVMSetInitializer(globalVar, /* constantVal:LLVMValueRef*/tmp);
+            map.put(ctx.IDENT().getText(),getExpValue(ctx.constInitVal().constExp().exp()));
+        } else {
+            LLVMValueRef pointer = LLVMBuildAlloca(builder, i32Type, /*pointerName:String*/ctx.IDENT().getText());
+            LLVMValueRef tmp = LLVMConstInt(i32Type, getExpValue(ctx.constInitVal().constExp().exp()), /* signExtend */ 0);
+            LLVMBuildStore(builder,tmp , pointer);
+            LLVMValueRef value = LLVMBuildLoad(builder, pointer, /*varName:String*/ctx.IDENT().getText() + "1");
+            map.put(ctx.IDENT().getText(),getExpValue(ctx.constInitVal().constExp().exp()));
         }
-        else {
-            for (SysYParser.InitValContext initVal : ctx.initVal()){
-                visitInitVal(initVal);
-            }
-        }
+        //System.out.println(isGlobalVar(ctx));
         return null;
     }
 
-
-    @Override
-    public Object visitConstdef(SysYParser.ConstdefContext ctx) {
-        if(curScope.find(ctx.IDENT().getText())){
-            OutputHelper.printSemanticError(ErrorType.Redefined_variable,ctx.IDENT().getSymbol().getLine()
-                    ,ctx.IDENT().getText());
-            return null;
-        }
-        String varName = ctx.IDENT().getText(); // 获取变量名
-        List<SysYParser.ConstExpContext> dimensions = ctx.constExp(); // 获取维度信息
-        if (dimensions.isEmpty()) {//Int
-            if (ctx.ASSIGN() != null) {
-                Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
-                if(tmp != null){
-
-                    if(tmp != null && !(tmp instanceof IntType)){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        curScope.getSymbols().put(varName, IntType.getInt32());
-                        return null;
-                    }//不确定是否在null时候也要return
-                }
+    private boolean isGlobalVar(SysYParser.VardefContext ctx) {
+        ParseTree parent = ctx.getParent();
+        while (parent != null) {
+            if (parent instanceof SysYParser.FuncDefContext) {
+                return false;
             }
-            curScope.getSymbols().put(varName, IntType.getInt32());
+            parent = parent.getParent();
         }
-        else {//数组
-            if (ctx.ASSIGN() != null) {
-                Type tmp = (Type) visitConstInitVal(ctx.constInitVal());
-                if(tmp != null){
+        return true;
+    }
 
-                    if(tmp != null  && !(tmp instanceof ArrayType)){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
-                        return null;
-                    }//不确定是否在null时候也要return
-                }
+    private boolean isGlobalVar(SysYParser.ConstdefContext ctx) {
+        ParseTree parent = ctx.getParent();
+        while (parent != null) {
+            if (parent instanceof SysYParser.FuncDefContext) {
+                return false;
             }
-            //List<String> list = dimensions.stream().map(text -> text.getText()).collect(Collectors.toList());
-            curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
+            parent = parent.getParent();
         }
-        return new Object();
+        return true;
     }
 
     @Override
-    public Object visitVardef(SysYParser.VardefContext ctx) {
-        if(curScope.find(ctx.IDENT().getText())){
-            OutputHelper.printSemanticError(ErrorType.Redefined_variable,ctx.IDENT().getSymbol().getLine()
-                    ,ctx.IDENT().getText());
-            return null;
-        }
-        String varName = ctx.IDENT().getText(); // 获取变量名
-        List<SysYParser.ConstExpContext> dimensions = ctx.constExp(); // 获取维度信息
-        if (dimensions.isEmpty()) {//Int
-            if (ctx.ASSIGN() != null) {
-                Type tmp = (Type) visitInitVal(ctx.initVal());
-                if(tmp != null){
+    public LLVMValueRef visitFuncDef(SysYParser.FuncDefContext ctx) {
+        LLVMTypeRef returnType = i32Type;
+        PointerPointer<Pointer> argumentTypes = new PointerPointer<>(0);
+        LLVMTypeRef ft = LLVMFunctionType(returnType, argumentTypes, 0, 0);
+        LLVMValueRef function = LLVMAddFunction(module, ctx.IDENT().getText(), ft);
+        LLVMBasicBlockRef block1 = LLVMAppendBasicBlock(function, ctx.IDENT().getText() + "Entry");
+        LLVMPositionBuilderAtEnd(builder, block1);
 
-                    if(!(tmp instanceof IntType)){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        curScope.getSymbols().put(varName, IntType.getInt32());
-                        return null;
-                    }//不确定是否在null时候也要return
-                }
-            }
-            curScope.getSymbols().put(varName, IntType.getInt32());
-        }
-        else {//数组
-            if (ctx.ASSIGN() != null) {
-                Type tmp = (Type) visitInitVal(ctx.initVal());
-                if(tmp != null){
-
-                    if(!(tmp instanceof ArrayType)){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
-                        return null;
-                    }//不确定是否在null时候也要return
-                }
-            }
-            //List<String> list = dimensions.stream().map(text -> text.getText()).collect(Collectors.toList());
-            curScope.getSymbols().put(varName, new ArrayType(dimensions.size()));
-        }
-        return new Object();
-    }
-
-
-
-    @Override
-    public Object visitCond(SysYParser.CondContext ctx) {
-        if(ctx.exp() != null){
-            Type tmp = (Type) visitExp(ctx.exp());
-            if(tmp != null && !(tmp instanceof IntType)){
-                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp().getStart().getLine(),
-                        ctx.exp().getText());
-                return null;
-            }
-            else if(tmp instanceof IntType){
-                return IntType.getInt32();
-            }
-        }
-        else {
-            List<SysYParser.CondContext> cond = ctx.cond();
-            for (int i = 0; i < cond.size(); i++) {
-                visitCond(cond.get(i));
-            }
-        }
-        return new Object();
+        super.visitChildren(ctx);
+        return null;
     }
 
     @Override
-    public Object visitConstExp(SysYParser.ConstExpContext ctx) {
-        return visitExp(ctx.exp());
-    }
-    @Override
-    public Object visitExp(SysYParser.ExpContext ctx) {
-        if(ctx == null){
-            return new Object();
-        }
-        else if(ctx.number() != null){
-            return IntType.getInt32();
-        }
-        else if(ctx.lVal() != null){//变量引用
-            return visitLVal(ctx.lVal());
-        }
-        else if(ctx.IDENT() != null){//CallFunc
-            if(curScope.resolve(ctx.IDENT().getText()) == null){
-                OutputHelper.printSemanticError(ErrorType.Undefined_function, ctx.IDENT().getSymbol().getLine(),
-                        ctx.IDENT().getText());
-                return null;
-            }
-            else if(!(curScope.resolve(ctx.IDENT().getText()) instanceof FunctionType)){
-                OutputHelper.printSemanticError(ErrorType.Not_a_function, ctx.IDENT().getSymbol().getLine(),
-                        ctx.IDENT().getText());
-                return null;
-            }
-            else {
-                if(ctx.L_PAREN() == null){
-                    OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.IDENT().getSymbol().getLine(),
-                            ctx.IDENT().getText());
-                    return null;
-                }
-                List<Type> fparams = ((FunctionType)curScope.resolve(ctx.IDENT().getText())).paramsType;
-                if(ctx.funcRParams() == null){
-                    if(fparams == null || fparams.isEmpty()){
-                        return ((FunctionType)curScope.resolve(ctx.IDENT().getText())).retTy;
-                    }
-                    else {
-                        OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        return null;
-                    }
-                }else {//注意比对参数
-                    List<SysYParser.ParamContext> rparams = ctx.funcRParams().param();
-                    if(rparams.size() != fparams.size()){
-                        OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        return null;
-                    }
-                    for (int i = 0; i < rparams.size(); i++) {
-                        Type tmpTy = (Type) visitExp(rparams.get(i).exp());
-                        if(tmpTy != null){
-
-                            if(tmpTy.getClass() != fparams.get(i).getClass()){
-                                OutputHelper.printSemanticError(ErrorType.Function_is_not_applicable_for_arguments,ctx.funcRParams().param(i).getStart().getLine(),
-                                        ctx.funcRParams().param(i).getStart().getText());
-                                return null;
-                            }
-                        }
-                    }
-                    //列表对比完成
-                    return ((FunctionType)curScope.resolve(ctx.IDENT().getText())).retTy;
-                }
+    public LLVMValueRef visitStmt(SysYParser.StmtContext ctx) {
+        if (ctx.RETURN() != null) {
+            if (ctx.exp() != null) {
+                int retValue = getExpValue(ctx.exp());
+                LLVMValueRef result = LLVMConstInt(i32Type, retValue, 0);
+                LLVMBuildRet(builder, result);
             }
         }
-        else{
-            if(ctx.R_PAREN() != null){//   (  exp  ) 列表只有一个exp
-                return visitExp(ctx.exp().get(0));
-            }
-            else {
-                List<SysYParser.ExpContext> exps = ctx.exp();
-                for (int i =exps.size()-1 ; i>=0;i--){
-                    Type tmp = (Type)visitExp(exps.get(i));
-                    if(tmp != null && !(tmp instanceof IntType)){
-                        OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_operands,ctx.exp(i).getStart().getLine(),
-                                ctx.exp(i).getStart().getText());
-                        return null;
-                    }
-                }
-                return IntType.getInt32();
-            }
-        }
-    }
-
-
-
-    @Override
-    public Object visitStmt(SysYParser.StmtContext ctx) {
-        if(ctx == null){
-            return null;
-        }
-        if(!ctx.stmt().isEmpty()){
-            for (SysYParser.StmtContext stmtContext : ctx.stmt()){
-                visitStmt(stmtContext);
-            }
-        }
-        if(ctx.ASSIGN() != null){
-            Type tp1 = (Type) visitLVal(ctx.lVal());
-            Type tp2 = (Type) visitExp(ctx.exp());
-            if (tp1 != null && tp2 != null && (tp1.getClass() != tp2.getClass())){
-                OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.ASSIGN().getSymbol().getLine(),
-                        ctx.ASSIGN().getText());
-                return null;
-            }
-            if(tp2 instanceof ArrayType && tp1 instanceof ArrayType){
-                ArrayType temp1 = (ArrayType) tp1;
-                ArrayType temp2 = (ArrayType) tp2;
-                if(temp1.getDimension() != temp2.getDimension()){
-                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_assignment,ctx.ASSIGN().getSymbol().getLine(),
-                            ctx.ASSIGN().getText());
-                    return null;
-                }
-            }
-        }
-        else if(ctx.RETURN() != null){
-            if(ctx.exp() == null){// 直接return;
-                if(!(curRetTpye instanceof VoidType)){
-                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_return,ctx.RETURN().getSymbol().getLine(),
-                            ctx.RETURN().getText());
-                    return null;
-                }
-            }
-            else {
-                Type tmp = (Type) visitExp(ctx.exp());
-                if (tmp != null && tmp.getClass() != curRetTpye.getClass()){
-                    OutputHelper.printSemanticError(ErrorType.Type_mismatched_for_return,ctx.RETURN().getSymbol().getLine(),
-                            ctx.RETURN().getText());
-                    return null;
-                }
-            }
-        }
-        else if(ctx.exp() != null){
-            return visitExp(ctx.exp());
+        else if(ctx.lVal() != null){
+            map.replace(ctx.lVal().IDENT().getText(), getExpValue(ctx.exp()));
         }
         else if(ctx.block() != null){
-            return visitBlock(ctx.block());
+            ctx.block().blockItem().forEach(this::visit); // 依次visit block中的节点
         }
-        else if(ctx.cond() != null){
-            return visitCond(ctx.cond());
-        }
-
-        return new Object();
+        return null;
     }
 
-    @Override
-    public Object visitLVal(SysYParser.LValContext ctx) {
-        if(curScope.resolve(ctx.IDENT().getText()) == null){
-            OutputHelper.printSemanticError(ErrorType.Undefined_variable,ctx.IDENT().getSymbol().getLine(),
-                    ctx.IDENT().getText());
-            return null;
+    public int getExpValue(SysYParser.ExpContext ctx) {
+        if(ctx == null){
+            return 0;
         }
-        else if((curScope.resolve(ctx.IDENT().getText()) instanceof IntType ||
-                curScope.resolve(ctx.IDENT().getText()) instanceof FunctionType) && !ctx.L_BRACKT().isEmpty()){
-            OutputHelper.printSemanticError(ErrorType.Not_an_array,ctx.IDENT().getSymbol().getLine(),
-                    ctx.IDENT().getText());
-            return null;
+        if (ctx.L_PAREN() != null) {
+            return getExpValue(ctx.exp(0));
+        } else if (ctx.number() != null) {
+            return Integer.parseInt(toInt(ctx.number().getText()));
+        } else if (ctx.unaryOp() != null) {
+            if (ctx.unaryOp().getText().equals("+")) {
+                return getExpValue(ctx.exp(0));
+            } else if (ctx.unaryOp().getText().equals("-")) {
+                return -getExpValue(ctx.exp(0));
+            } else if (ctx.unaryOp().getText().equals("!")) {
+                return getExpValue(ctx.exp(0)) == 0 ? 1 : 0;
+            }
+        }else if(ctx.lVal() != null){
+            return map.get(ctx.lVal().IDENT().getText());
         }
+        else {
+            if (ctx.DIV() != null) {
+                return getExpValue(ctx.exp(0)) / getExpValue(ctx.exp(1));
+            } else if (ctx.MUL() != null) {
+                return getExpValue(ctx.exp(0)) * getExpValue(ctx.exp(1));
+            } else if (ctx.MOD() != null) {
+                return getExpValue(ctx.exp(0)) % getExpValue(ctx.exp(1));
+            } else if (ctx.MINUS() != null) {
+                return getExpValue(ctx.exp(0)) - getExpValue(ctx.exp(1));
+            } else if (ctx.PLUS() != null) {
+                return getExpValue(ctx.exp(0)) + getExpValue(ctx.exp(1));
+            }
+        }//reduce false
+        return 0;
+    }
 
-        if(curScope.resolve(ctx.IDENT().getText()) instanceof ArrayType){
-            int LbraketSize = ctx.L_BRACKT().size();
-            for (int i = 0; i < ctx.exp().size(); i++) {
-                Type o = (Type)visitExp(ctx.exp(i));
-//				if(o == null){
-//					OutputHelper.printSemanticError(ErrorType.);
-//				}
-                // 无需报错，因为先前已经报过
-                if(o != null){
-                    if(o instanceof IntType){
-                        //正确
-                    }
-                    else {//未提及，不确定
-                        OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
-                                ctx.IDENT().getText());
-                        return null;
-                    }
-                }
-            }
-            int remain_Dim = ((ArrayType)curScope.resolve(ctx.IDENT().getText())).getDimension() - ctx.L_BRACKT().size();
-            if(remain_Dim < 0){
-                OutputHelper.printSemanticError(ErrorType.Not_an_array,ctx.IDENT().getSymbol().getLine(),
-                        ctx.IDENT().getText());
-                return null;
-            }
-            else if(remain_Dim == 0){
-                return IntType.getInt32();
-            }
-            else {
-                return new ArrayType(remain_Dim);
-            }
+    public String toInt(String ret) {
+        if (ret.charAt(0) == '0' && ret.length() > 1 &&
+                ret.charAt(1) != 'x' && ret.charAt(1) != 'X') {// 8
+            return String.valueOf(Integer.parseInt(ret.substring(1), 8));
+        } else if (ret.length() > 2 &&
+                (ret.substring(0, 2).equals("0x") || ret.substring(0, 2).equals("0X"))) {// 16
+            return String.valueOf(Integer.parseInt(ret.substring(2), 16));
+        } else {
+            return ret;
         }
-        else if(curScope.resolve(ctx.IDENT().getText()) instanceof IntType){
-            return IntType.getInt32();
-        }
-        else {//FunctionType
-            if(ctx.getParent() instanceof SysYParser.StmtContext){
-                OutputHelper.printSemanticError(ErrorType.The_left_hand_side_of_an_assignment_must_be_a_variable,ctx.IDENT().getSymbol().getLine(),
-                        ctx.IDENT().getText());
-                return null;
-            }
-            else {
-                return (FunctionType)curScope.resolve(ctx.IDENT().getText());
-            }
-        }
-
     }
 
 }
-
-

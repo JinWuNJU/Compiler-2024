@@ -1,9 +1,4 @@
-int a(){
-return 0;
-}
-int main(){
-int b = a;//wrong
-const int c = a;//wrong
-b = a;//wrong
-return 0;
+int main() {
+    int a = 2;
+    return a;
 }
