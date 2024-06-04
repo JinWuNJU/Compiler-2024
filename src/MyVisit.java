@@ -36,7 +36,7 @@ public class MyVisit extends SysYParserBaseVisitor<LLVMValueRef>{
     LLVMValueRef zeroValue = LLVM.LLVMConstInt(i32Type, 0, 0);
 
     //初始化LLVM
-    public llvmVisitor(){
+    public MyVisit(){
         LLVMInitializeCore(LLVMGetGlobalPassRegistry());
         LLVMLinkInMCJIT();
         LLVMInitializeNativeAsmPrinter();
@@ -51,7 +51,7 @@ public class MyVisit extends SysYParserBaseVisitor<LLVMValueRef>{
     @Override
     public LLVMValueRef visitFuncDef(SysYParser.FuncDefContext ctx) {
         String functionName = ctx.IDENT().getText();
-        LLVMTypeRef returnType = (ctx.VOID() != null) ? LLVM.LLVMVoidType() : i32Type;
+        LLVMTypeRef returnType = (ctx.functype().VOID() != null) ? LLVM.LLVMVoidType() : i32Type;
         // 获取函数参数列表
         List<SysYParser.FuncFParamContext> params = ctx.funcFParams() != null ? ctx.funcFParams().funcFParam() : Collections.emptyList();
 
@@ -292,15 +292,15 @@ public class MyVisit extends SysYParserBaseVisitor<LLVMValueRef>{
     }
 
     @Override
-    public LLVMValueRef visitConstDecl(SysYParser.ConstDeclContext ctx) {
-        for (SysYParser.ConstDefContext constDefContext : ctx.constDef()) {
+    public LLVMValueRef visitConstdecl(SysYParser.ConstdeclContext ctx) {
+        for (SysYParser.ConstdefContext  constDefContext : ctx.constdef()) {
             visit(constDefContext);
         }
         return null;
     }
 
     @Override
-    public LLVMValueRef visitConstDef(SysYParser.ConstDefContext ctx) {
+    public LLVMValueRef visitConstdef(SysYParser.ConstdefContext ctx) {
         String varName = ctx.IDENT().getText();
         LLVMValueRef var;
         LLVMValueRef value = visit(ctx.constInitVal());
@@ -319,15 +319,15 @@ public class MyVisit extends SysYParserBaseVisitor<LLVMValueRef>{
     }
 
     @Override
-    public LLVMValueRef visitVarDecl(SysYParser.VarDeclContext ctx) {
-        for (SysYParser.VarDefContext varDefContext : ctx.varDef()) {
+    public LLVMValueRef visitVardecl(SysYParser.VardeclContext ctx) {
+        for (SysYParser.VardefContext varDefContext : ctx.vardef()) {
             visit(varDefContext);
         }
         return null;
     }
 
     @Override
-    public LLVMValueRef visitVarDef(SysYParser.VarDefContext ctx) {
+    public LLVMValueRef visitVardef(SysYParser.VardefContext ctx) {
         String varName = ctx.IDENT().getText();
         LLVMValueRef var;
         if (currentBlock == null) {
