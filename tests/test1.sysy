@@ -1,8 +1,11 @@
-int a = 1;
-const int b = 2;
-int main() {
-int c = -(a + b);
-int d = !(a + b);
-int e = +(a + b);
-return 0;
+int main(){
+    int a=0;
+    int count=0;
+    while(a<=0){
+        a=a-1;
+        count=count+1;
+        if(a<-20)
+            break;
+    }
+    return count;
 }
