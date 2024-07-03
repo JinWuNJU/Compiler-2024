@@ -117,37 +117,37 @@ public class AsmBuilder {
                         case LLVMRet:
                             judge(inst,"a0");
                             break;
-                        case LLVMAlloca:
-                            LLVMValueRef next = LLVMGetNextInstruction(inst);
-                            LLVMValueRef constantInt = LLVMGetOperand(next, 0);
-                            long value = LLVMConstIntGetSExtValue(constantInt);
-                            li("t0",value);
-                            sw("t0",stackSize - map.get(inst) * 4,"sp");
-                            inst = next;
-                            break;
-                        case LLVMAdd:
-                            LLVMValueRef op1 = LLVMGetOperand(inst, 0);
-                            LLVMValueRef op2 = LLVMGetOperand(inst, 1);
-                            judge(op1,"t0");
-                            judge(op2,"t1");
-                            add("t0","t0","t1");
-                            sw("t0",stackSize - map.get(inst) * 4,"sp");
-                            break;
-                        case LLVMStore:
-                            LLVMValueRef oop1 = LLVMGetOperand(inst, 0);
-                            LLVMValueRef oop2 = LLVMGetOperand(inst, 1);
-                            judge(oop1,"t0");
-                            if(LLVMIsAGlobalVariable(oop2) != null){ // global
-                                la(LLVMGetValueName(oop2).getString(),"t1");
-                                sw("t0",0,"t1");
-                            }else {// temp
-                                sw("t0",stackSize - map.get(oop2) * 4,"sp");
-                            }
-                            break;
-                        case LLVMLoad:
-                            judge(LLVMGetOperand(inst, 0),"t0");
-                            sw("t0",stackSize - map.get(inst) * 4,"sp");
-                            break;
+//                        case LLVMAlloca:
+//                            LLVMValueRef next = LLVMGetNextInstruction(inst);
+//                            LLVMValueRef constantInt = LLVMGetOperand(next, 0);
+//                            long value = LLVMConstIntGetSExtValue(constantInt);
+//                            li("t0",value);
+//                            sw("t0",stackSize - map.get(inst) * 4,"sp");
+//                            inst = next;
+//                            break;
+//                        case LLVMAdd:
+//                            LLVMValueRef op1 = LLVMGetOperand(inst, 0);
+//                            LLVMValueRef op2 = LLVMGetOperand(inst, 1);
+//                            judge(op1,"t0");
+//                            judge(op2,"t1");
+//                            add("t0","t0","t1");
+//                            sw("t0",stackSize - map.get(inst) * 4,"sp");
+//                            break;
+//                        case LLVMStore:
+//                            LLVMValueRef oop1 = LLVMGetOperand(inst, 0);
+//                            LLVMValueRef oop2 = LLVMGetOperand(inst, 1);
+//                            judge(oop1,"t0");
+//                            if(LLVMIsAGlobalVariable(oop2) != null){ // global
+//                                la(LLVMGetValueName(oop2).getString(),"t1");
+//                                sw("t0",0,"t1");
+//                            }else {// temp
+//                                sw("t0",stackSize - map.get(oop2) * 4,"sp");
+//                            }
+//                            break;
+//                        case LLVMLoad:
+//                            judge(LLVMGetOperand(inst, 0),"t0");
+//                            sw("t0",stackSize - map.get(inst) * 4,"sp");
+//                            break;
                         default:
                             break;
                     }
