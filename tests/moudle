@@ -1,45 +1,16 @@
 ; ModuleID = 'module'
 source_filename = "module"
 
+@a = global i32 1
+@b = global i32 0
+
 define i32 @main() {
 mainEntry:
-  %a = alloca i32, align 4
-  store i32 0, i32* %a, align 4
-  %count = alloca i32, align 4
-  store i32 0, i32* %count, align 4
-  br label %while_condition
-
-while_condition:                                  ; preds = %if_next, %mainEntry
-  %a1 = load i32, i32* %a, align 4
-  %icmp_le = icmp sle i32 %a1, 0
-  %icmp_le2 = zext i1 %icmp_le to i32
-  %icmp_ne = icmp ne i32 0, %icmp_le2
-  br i1 %icmp_ne, label %while_body, label %while_end
-
-while_body:                                       ; preds = %while_condition
-  %a3 = load i32, i32* %a, align 4
-  %subtmp = sub i32 %a3, 1
-  store i32 %subtmp, i32* %a, align 4
-  %count4 = load i32, i32* %count, align 4
-  %addtmp = add i32 %count4, 1
-  store i32 %addtmp, i32* %count, align 4
-  %a5 = load i32, i32* %a, align 4
-  %icmp_lt = icmp slt i32 %a5, -20
-  %icmp_lt6 = zext i1 %icmp_lt to i32
-  %icmp_ne7 = icmp ne i32 0, %icmp_lt6
-  br i1 %icmp_ne7, label %if_true, label %if_else
-
-while_end:                                        ; preds = %if_true, %while_condition
-  %count8 = load i32, i32* %count, align 4
-  ret i32 %count8
-
-if_true:                                          ; preds = %while_body
-  br label %while_end
-  br label %if_next
-
-if_else:                                          ; preds = %while_body
-  br label %if_next
-
-if_next:                                          ; preds = %if_else, %if_true
-  br label %while_condition
+  %c = alloca i32, align 4
+  store i32 3, i32* %c, align 4
+  %c1 = load i32, i32* %c, align 4
+  %d = alloca i32, align 4
+  store i32 10, i32* %d, align 4
+  %d1 = load i32, i32* %d, align 4
+  ret i32 19
 }

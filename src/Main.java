@@ -3,11 +3,15 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.llvm.LLVM.LLVMBasicBlockRef;
+import org.bytedeco.llvm.LLVM.LLVMValueRef;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 
-import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
-import static org.bytedeco.llvm.global.LLVM.LLVMPrintModuleToFile;
+import static org.bytedeco.llvm.global.LLVM.*;
 
 public class Main {
 
@@ -27,10 +31,13 @@ public class Main {
             MyVisit visitor = new MyVisit();
 
             visitor.visit(tree);
+            AsmBuilder asmBuilder = new AsmBuilder(visitor.module);
+            asmBuilder.operate();
 
-            if (LLVMPrintModuleToFile(visitor.module, args[1], error) != 0) {
-                LLVMDisposeMessage(error);
-            }
+            File f = new File(args[1]);
+            FileOutputStream fos = new FileOutputStream(f);
+            fos.write(asmBuilder.buffer.toString().getBytes());
+
         }
 
     }
