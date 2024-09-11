@@ -6,9 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ErrorListener extends BaseErrorListener {
-
+    
     public static List<String> list = new ArrayList<>();
     public static boolean isError = false;
+
 
 
     @Override
@@ -26,6 +27,7 @@ public class ErrorListener extends BaseErrorListener {
 
 
     public static void printLexerErrorInformation(){
+        int i = 1;
         for(String s : list){
             System.out.println(s);
         }
